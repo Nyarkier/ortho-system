@@ -4,7 +4,7 @@ function App() {
 
       {/* NAVBAR */}
       <nav className="flex justify-between items-center p-4 bg-white shadow">
-        <h1 className="text-xl font-bold text-blue-600">Smile Ortho</h1>
+        <h1 className="text-xl font-bold text-blue-600">Doc Jun</h1>
         <button className="bg-green-500 text-white px-4 py-2 rounded">
           Book Now
         </button>
