@@ -59,11 +59,12 @@ def get_appointments():
     return data
 
 # CHECK-IN
+
 @app.post("/checkin")
-def check_in(name: str):
+def check_in(name: str, date: str, time: str):
     cursor.execute(
-        "UPDATE appointments SET checked_in = 1 WHERE name = ?",
-        (name,)
+        "UPDATE appointments SET checked_in = 1 WHERE name = ? AND date = ? AND time = ?",
+        (name, date, time)
     )
     conn.commit()
     return {"message": "Checked in"}
