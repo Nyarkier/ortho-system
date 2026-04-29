@@ -13,7 +13,7 @@ function App() {
   const [checkDate, setCheckDate] = useState("");
   const [checkTime, setCheckTime] = useState("");
 
-  // BOOK APPOINTMENT
+  // ✅ BOOK APPOINTMENT
   const handleSubmit = async () => {
     if (!name || !phone || !date || !time) {
       alert("Please fill all fields");
@@ -35,21 +35,27 @@ function App() {
       });
 
       const data = await res.json();
-      alert(data.message);
 
-      // reset
-      setName("");
-      setPhone("");
-      setDate("");
-      setTime("");
+      // ✅ SMART ALERT
+      if (data.status === "error") {
+        alert("❌ " + data.message);
+      } else {
+        alert("✅ " + data.message);
+
+        // clear inputs only if success
+        setName("");
+        setPhone("");
+        setDate("");
+        setTime("");
+      }
 
     } catch (error) {
       console.error(error);
-      alert("Error connecting to backend");
+      alert("❌ Error connecting to backend");
     }
   };
 
-  // CHECK-IN
+  // ✅ CHECK-IN
   const handleCheckIn = async () => {
     if (!checkName || !checkDate || !checkTime) {
       alert("Fill all check-in fields");
@@ -65,15 +71,22 @@ function App() {
       );
 
       const data = await res.json();
-      alert(data.message);
 
-      setCheckName("");
-      setCheckDate("");
-      setCheckTime("");
+      // ✅ SMART ALERT
+      if (data.status === "error") {
+        alert("❌ " + data.message);
+      } else {
+        alert("✅ " + data.message);
+
+        // clear inputs only if success
+        setCheckName("");
+        setCheckDate("");
+        setCheckTime("");
+      }
 
     } catch (error) {
       console.error(error);
-      alert("Error connecting to backend");
+      alert("❌ Error connecting to backend");
     }
   };
 

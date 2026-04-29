@@ -4,6 +4,8 @@ import sqlite3
 from fastapi.middleware.cors import CORSMiddleware
 
 app = FastAPI()
+
+# CORS
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"],
@@ -11,8 +13,9 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
 # -------------------------
-# DATABASE SETUP
+# DATABASE
 # -------------------------
 conn = sqlite3.connect("appointments.db", check_same_thread=False)
 cursor = conn.cursor()
@@ -30,41 +33,79 @@ CREATE TABLE IF NOT EXISTS appointments (
 conn.commit()
 
 # -------------------------
-# MODELS
+# MODEL
 # -------------------------
 class Appointment(BaseModel):
     name: str
     phone: str
     date: str
     time: str
-# -------------------------
-# ROUTES
-# -------------------------
 
+# -------------------------
 # CREATE APPOINTMENT
+# -------------------------
 @app.post("/appointments")
 def create_appointment(appt: Appointment):
+
+    # 🔒 PREVENT DOUBLE BOOKING
+    cursor.execute(
+        "SELECT * FROM appointments WHERE date = ? AND time = ?",
+        (appt.date, appt.time)
+    )
+    existing = cursor.fetchone()
+
+    if existing:
+        return {"status": "error", "message": "Time slot already booked"}
+
     cursor.execute(
         "INSERT INTO appointments (name, phone, date, time) VALUES (?, ?, ?, ?)",
         (appt.name, appt.phone, appt.date, appt.time)
     )
     conn.commit()
-    return {"message": "Appointment created"}
 
-# GET ALL APPOINTMENTS
+    return {"status": "success", "message": "Appointment created"}
+
+# -------------------------
+# GET APPOINTMENTS
+# -------------------------
 @app.get("/appointments")
 def get_appointments():
     cursor.execute("SELECT * FROM appointments")
-    data = cursor.fetchall()
+    rows = cursor.fetchall()
+
+    # ✅ Convert to readable JSON
+    data = []
+    for row in rows:
+        data.append({
+            "id": row[0],
+            "name": row[1],
+            "phone": row[2],
+            "date": row[3],
+            "time": row[4],
+            "checked_in": bool(row[5])
+        })
+
     return data
 
+# -------------------------
 # CHECK-IN
-
+# -------------------------
 @app.post("/checkin")
 def check_in(name: str, date: str, time: str):
+
+    cursor.execute(
+        "SELECT * FROM appointments WHERE name = ? AND date = ? AND time = ?",
+        (name, date, time)
+    )
+    appt = cursor.fetchone()
+
+    if not appt:
+        return {"status": "error", "message": "Appointment not found"}
+
     cursor.execute(
         "UPDATE appointments SET checked_in = 1 WHERE name = ? AND date = ? AND time = ?",
         (name, date, time)
     )
     conn.commit()
-    return {"message": "Checked in"}
+
+    return {"status": "success", "message": "Checked in"}
