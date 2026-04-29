@@ -2,9 +2,9 @@ from fastapi import FastAPI
 from pydantic import BaseModel
 import sqlite3
 from fastapi.middleware.cors import CORSMiddleware
-
+import pandas as pd
 app = FastAPI()
-
+from apscheduler.schedulers.background import BackgroundScheduler
 # CORS
 app.add_middleware(
     CORSMiddleware,
@@ -109,3 +109,16 @@ def check_in(name: str, date: str, time: str):
     conn.commit()
 
     return {"status": "success", "message": "Checked in"}
+
+def export_to_excel():
+    conn = sqlite3.connect("appointments.db")
+    
+    df = pd.read_sql_query("SELECT * FROM appointments", conn)
+    
+    df.to_excel("appointments.xlsx", index=False)
+    
+    conn.close()
+
+scheduler = BackgroundScheduler()
+scheduler.add_job(export_to_excel, 'interval', minutes=2)  # every 5 mins
+scheduler.start()
