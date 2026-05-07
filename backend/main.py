@@ -120,5 +120,8 @@ def export_to_excel():
     conn.close()
 
 scheduler = BackgroundScheduler()
-scheduler.add_job(export_to_excel, 'interval', minutes=2)  # every 5 mins
+scheduler.add_job(export_to_excel, 'interval', days=7)  # every 7 days
 scheduler.start()
+
+
+#Contact me if you have any questions: Kurtkiervalerio@gmail.com #
