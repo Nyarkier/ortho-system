@@ -11,27 +11,34 @@ function Home() {
   const [checkDate, setCheckDate] = useState("");
   const [checkTime, setCheckTime] = useState("");
 
+  const API_BASE = "http://127.0.0.1:8000";
+
   const handleSubmit = async () => {
     if (!name || !phone || !date || !time) {
       alert("Please fill all fields");
       return;
     }
 
-    const res = await fetch("/appointments", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({ name, phone, date, time }),
-    });
+    try {
+      const res = await fetch(`${API_BASE}/appointments`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ name, phone, date, time }),
+      });
 
-    const data = await res.json();
+      const data = await res.json();
 
-    if (data.status === "error") {
-      alert("❌ " + data.message);
-    } else {
-      alert("✅ " + data.message);
-      setName(""); setPhone(""); setDate(""); setTime("");
+      if (data.status === "error") {
+        alert("❌ " + data.message);
+      } else {
+        alert("✅ " + data.message);
+        setName(""); setPhone(""); setDate(""); setTime("");
+      }
+    } catch (error) {
+      alert("❌ Unable to reach backend. Please make sure the server is running at http://127.0.0.1:8000.");
+      console.error(error);
     }
   };
 
@@ -42,7 +49,7 @@ function Home() {
     }
 
     const res = await fetch(
-      `/checkin?name=${checkName}&date=${checkDate}&time=${checkTime}`,
+      `${API_BASE}/checkin?name=${checkName}&date=${checkDate}&time=${checkTime}`,
       { method: "POST" }
     );
 

@@ -3,8 +3,68 @@ import React, { useState } from 'react'; // Added useState
 import './App.css'; 
 
 function App() {
-  // ADD THIS LINE for the spinner
   const [isLoading, setIsLoading] = useState(false);
+  const [name, setName] = useState("");
+  const [phone, setPhone] = useState("");
+  const [date, setDate] = useState("");
+  const [time, setTime] = useState("");
+  const [checkName, setCheckName] = useState("");
+  const [checkDate, setCheckDate] = useState("");
+  const [checkTime, setCheckTime] = useState("");
+
+  const API_BASE = "http://127.0.0.1:8000";
+
+  const handleSubmit = async () => {
+    if (!name || !phone || !date || !time) {
+      alert("Please fill all fields");
+      return;
+    }
+
+    setIsLoading(true);
+    try {
+      const res = await fetch(`${API_BASE}/appointments`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ name, phone, date, time }),
+      });
+      const data = await res.json();
+      if (data.status === "error") {
+        alert("❌ " + data.message);
+      } else {
+        alert("✅ " + data.message);
+        setName(""); setPhone(""); setDate(""); setTime("");
+      }
+    } catch (error) {
+      alert("❌ Unable to reach backend. Start the server on http://127.0.0.1:8000.");
+      console.error(error);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const handleCheckIn = async () => {
+    if (!checkName || !checkDate || !checkTime) {
+      alert("Fill all check-in fields");
+      return;
+    }
+
+    try {
+      const res = await fetch(
+        `${API_BASE}/checkin?name=${encodeURIComponent(checkName)}&date=${encodeURIComponent(checkDate)}&time=${encodeURIComponent(checkTime)}`,
+        { method: "POST" }
+      );
+      const data = await res.json();
+      if (data.status === "error") {
+        alert("❌ " + data.message);
+      } else {
+        alert("✅ " + data.message);
+        setCheckName(""); setCheckDate(""); setCheckTime("");
+      }
+    } catch (error) {
+      alert("❌ Unable to reach backend. Start the server on http://127.0.0.1:8000.");
+      console.error(error);
+    }
+  };
 
   return (
     <div className="app">
@@ -27,22 +87,46 @@ function App() {
           <h3>Book Appointment</h3>
           <form>
             <div className="input-group">
-              <input type="text" placeholder=" " required />
+              <input
+                type="text"
+                placeholder=" "
+                value={name}
+                onChange={(e) => setName(e.target.value)}
+                required
+              />
               <label>Name</label>
             </div>
             
             <div className="input-group">
-              <input type="tel" placeholder=" " required />
+              <input
+                type="tel"
+                placeholder=" "
+                value={phone}
+                onChange={(e) => setPhone(e.target.value)}
+                required
+              />
               <label>Phone</label>
             </div>
 
             <div className="input-group">
-              <input type="date" placeholder=" " required />
+              <input
+                type="date"
+                placeholder=" "
+                value={date}
+                onChange={(e) => setDate(e.target.value)}
+                required
+              />
               <label>Appointment Date</label>
             </div>
 
             <div className="input-group">
-              <input type="time" placeholder=" " required />
+              <input
+                type="time"
+                placeholder=" "
+                value={time}
+                onChange={(e) => setTime(e.target.value)}
+                required
+              />
               <label>Appointment Time</label>
             </div>
 
@@ -50,7 +134,7 @@ function App() {
             <button 
               type="button" 
               className={`btn btn-confirm ${isLoading ? 'btn-loading' : ''}`}
-              onClick={() => setIsLoading(true)}
+              onClick={handleSubmit}
             >
               {isLoading ? 'Processing...' : 'Confirm'}
             </button>
@@ -62,22 +146,40 @@ function App() {
           <h3 style={{textAlign: 'center'}}>Check-In</h3>
           <form>
             <div className="input-group">
-              <input type="text" placeholder=" " required />
+              <input
+                type="text"
+                placeholder=" "
+                value={checkName}
+                onChange={(e) => setCheckName(e.target.value)}
+                required
+              />
               <label>Name</label>
             </div>
 
             <div className="input-group">
-              <input type="date" placeholder=" " required />
+              <input
+                type="date"
+                placeholder=" "
+                value={checkDate}
+                onChange={(e) => setCheckDate(e.target.value)}
+                required
+              />
               <label>Date</label>
             </div>
 
             <div className="input-group">
-              <input type="time" placeholder=" " required />
+              <input
+                type="time"
+                placeholder=" "
+                value={checkTime}
+                onChange={(e) => setCheckTime(e.target.value)}
+                required
+              />
               <label>Time</label>
             </div>
 
             {/* ADDED SPINNER HERE TOO IF YOU WANT */}
-            <button type="button" className="btn btn-checkin">Check-In</button>
+            <button type="button" className="btn btn-checkin" onClick={handleCheckIn}>Check-In</button>
           </form>
         </div>
 

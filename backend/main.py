@@ -1,10 +1,21 @@
+import sys
+import webbrowser
+from pathlib import Path
+
 from fastapi import FastAPI
+from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import FileResponse
+from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel
 import sqlite3
-from fastapi.middleware.cors import CORSMiddleware
 import pandas as pd
+
+BASE_DIR = Path(__file__).resolve().parent
+DIST_DIR = Path(sys._MEIPASS) / "dist" if getattr(sys, "_MEIPASS", None) else BASE_DIR.parent / "ortho-app" / "dist"
+
 app = FastAPI()
 from apscheduler.schedulers.background import BackgroundScheduler
+
 # CORS
 app.add_middleware(
     CORSMiddleware,
@@ -13,6 +24,11 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+if DIST_DIR.exists():
+    app.mount("/", StaticFiles(directory=DIST_DIR, html=True), name="frontend")
+else:
+    print(f"WARNING: Frontend dist folder not found at {DIST_DIR}")
 
 # -------------------------
 # DATABASE
@@ -122,6 +138,15 @@ def export_to_excel():
 scheduler = BackgroundScheduler()
 scheduler.add_job(export_to_excel, 'interval', days=7)  # every 7 days
 scheduler.start()
+
+if __name__ == "__main__":
+    url = "http://127.0.0.1:8000"
+    try:
+        webbrowser.open(url)
+    except Exception:
+        pass
+    import uvicorn
+    uvicorn.run(app, host="127.0.0.1", port=8000)
 
 
 #Contact me if you have any questions: Kurtkiervalerio@gmail.com #
