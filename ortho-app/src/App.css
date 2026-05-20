@@ -25,6 +25,9 @@ body {
 
 /* --- Brand Bar --- */
 .brand-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
   padding: 15px 40px;
   background: white;
   border-bottom: 1px solid #eee;
@@ -32,6 +35,21 @@ body {
 .brand-bar h2 {
   color: var(--primary-blue);
   margin: 0;
+}
+.btn-extract {
+  width: auto !important;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 70px;
+  padding: 6px 10px;
+  font-size: 0.8rem;
+  border-radius: 6px;
+  background-color: #2563eb;
+}
+.btn-extract:hover {
+  background-color: #1d4ed8;
+  transform: scale(1.02);
 }
 
 /* --- Hero Section --- */

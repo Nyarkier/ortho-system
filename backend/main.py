@@ -11,7 +11,18 @@ import sqlite3
 import pandas as pd
 
 BASE_DIR = Path(__file__).resolve().parent
-DIST_DIR = Path(sys._MEIPASS) / "dist" if getattr(sys, "_MEIPASS", None) else BASE_DIR.parent / "ortho-app" / "dist"
+
+if getattr(sys, "_MEIPASS", None):
+    FRONTEND_DIST = Path(sys._MEIPASS) / "dist"
+    exe_dir = Path(sys.executable).resolve().parent
+    DATA_DIR = exe_dir.parent if exe_dir.name == "package" else BASE_DIR.parent / "dist"
+else:
+    FRONTEND_DIST = BASE_DIR.parent / "ortho-app" / "dist"
+    DATA_DIR = BASE_DIR.parent / "dist"
+
+DATA_DIR.mkdir(parents=True, exist_ok=True)
+DB_PATH = DATA_DIR / "appointments.db"
+EXPORT_PATH = DATA_DIR / "appointments.xlsx"
 
 app = FastAPI()
 from apscheduler.schedulers.background import BackgroundScheduler
@@ -25,15 +36,10 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-if DIST_DIR.exists():
-    app.mount("/", StaticFiles(directory=DIST_DIR, html=True), name="frontend")
-else:
-    print(f"WARNING: Frontend dist folder not found at {DIST_DIR}")
-
 # -------------------------
 # DATABASE
 # -------------------------
-conn = sqlite3.connect("appointments.db", check_same_thread=False)
+conn = sqlite3.connect(DB_PATH, check_same_thread=False)
 cursor = conn.cursor()
 
 cursor.execute("""
@@ -126,14 +132,27 @@ def check_in(name: str, date: str, time: str):
 
     return {"status": "success", "message": "Checked in"}
 
+@app.post("/export")
+def export_appointments():
+    try:
+        export_to_excel()
+        return {"status": "success", "message": "Exported to appointments.xlsx"}
+    except Exception as e:
+        return {"status": "error", "message": str(e)}
+
 def export_to_excel():
-    conn = sqlite3.connect("appointments.db")
+    conn = sqlite3.connect(DB_PATH)
     
     df = pd.read_sql_query("SELECT * FROM appointments", conn)
     
-    df.to_excel("appointments.xlsx", index=False)
+    df.to_excel(EXPORT_PATH, index=False)
     
     conn.close()
+
+if FRONTEND_DIST.exists():
+    app.mount("/", StaticFiles(directory=FRONTEND_DIST, html=True), name="frontend")
+else:
+    print(f"WARNING: Frontend dist folder not found at {FRONTEND_DIST}")
 
 scheduler = BackgroundScheduler()
 scheduler.add_job(export_to_excel, 'interval', days=7)  # every 7 days

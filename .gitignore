@@ -1,0 +1,20 @@
+﻿# Python
+__pycache__/
+*.py[cod]
+*.pyo
+*.pyd
+
+# Virtualenv
+.venv/
+
+# SQLite and Excel exports
+backend/appointments.db
+dist/appointments.db
+dist/appointments.xlsx
+
+# Node
+node_modules/
+
+# Build artifacts
+*.exe
+*.log

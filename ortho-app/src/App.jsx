@@ -1,5 +1,5 @@
 // App.jsx
-import React, { useState } from 'react'; // Added useState
+import React, { useEffect, useState } from 'react';
 import './App.css'; 
 
 function App() {
@@ -11,8 +11,37 @@ function App() {
   const [checkName, setCheckName] = useState("");
   const [checkDate, setCheckDate] = useState("");
   const [checkTime, setCheckTime] = useState("");
+  const [isExporting, setIsExporting] = useState(false);
 
   const API_BASE = "http://127.0.0.1:8000";
+  const UPCOMING_THRESHOLD_MINUTES = 60;
+
+  const checkUpcomingAppointments = async () => {
+    try {
+      const res = await fetch(`${API_BASE}/appointments`);
+      if (!res.ok) return;
+      const appointments = await res.json();
+      const now = new Date();
+      const soon = appointments.find((appt) => {
+        if (appt.checked_in) return false;
+        const appointmentDate = new Date(`${appt.date}T${appt.time}`);
+        const diffMin = (appointmentDate - now) / 1000 / 60;
+        return diffMin >= 0 && diffMin <= UPCOMING_THRESHOLD_MINUTES;
+      });
+
+      if (soon) {
+        alert(`Reminder: appointment for ${soon.name} is in ${Math.round((new Date(`${soon.date}T${soon.time}`) - now) / 1000 / 60)} minutes.`);
+      }
+    } catch (error) {
+      console.error("Upcoming appointment check failed", error);
+    }
+  };
+
+  useEffect(() => {
+    checkUpcomingAppointments();
+    const interval = setInterval(checkUpcomingAppointments, 5 * 60 * 1000);
+    return () => clearInterval(interval);
+  }, []);
 
   const handleSubmit = async () => {
     if (!name || !phone || !date || !time) {
@@ -66,11 +95,37 @@ function App() {
     }
   };
 
+  const handleExport = async () => {
+    setIsExporting(true);
+    try {
+      const res = await fetch(`${API_BASE}/export`, { method: "POST" });
+      const data = await res.json();
+      if (data.status === "success") {
+        alert("✅ Export complete: appointments.xlsx created.");
+      } else {
+        alert("❌ " + (data.message || "Export failed"));
+      }
+    } catch (error) {
+      alert("❌ Unable to reach backend. Start the server on http://127.0.0.1:8000.");
+      console.error(error);
+    } finally {
+      setIsExporting(false);
+    }
+  };
+
   return (
     <div className="app">
       {/* Brand Bar */}
       <div className="brand-bar">
         <h2>Dr. Jun Villaflores, DMD</h2>
+        <button
+          type="button"
+          className={`btn btn-extract ${isExporting ? 'btn-loading' : ''}`}
+          onClick={handleExport}
+          disabled={isExporting}
+        >
+          {isExporting ? 'Extracting...' : 'Extract'}
+        </button>
       </div>
 
       {/* Hero Section */}
