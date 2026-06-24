@@ -17,18 +17,18 @@ This app is functional for local use, but it is not yet production-grade.
 
 - Create appointments
 - Prevent duplicate bookings for the same date/time
-- Simple patient check-in
-- Export appointments to `appointments.xlsx`
-- Frontend communicates with backend at `http://127.0.0.1:8000`
+- Patient check-in with full visit details (address, age, payment method, amount paid, procedure)
+- Automatic check-in timestamp recording
+- Admin dashboard at `/admin` to view and delete appointments
+- Export appointments to `appointments.xlsx` (includes all visit fields)
+- Frontend uses relative API URL in production; dev mode uses `http://127.0.0.1:8000`
 
 ### Known gaps and issues
 
-- `Admin.jsx` includes a DELETE button, but backend does not expose a DELETE `/appointments/{id}` endpoint.
-- Frontend uses a hardcoded backend URL (`127.0.0.1:8000`). This is fine for local use but not robust for deployment.
 - No authentication or access control.
-- CORS is wide open (`allow_origins=['*']`). This is okay for local development but not secure for production.
+- CORS is restricted to localhost origins for development.
 - No validation beyond required fields and duplicate time checks.
-- There is no packaged installer yet.
+- There is no packaged installer yet (use `package.ps1` for a portable `.exe`).
 
 ## Install and run locally
 
@@ -130,10 +130,7 @@ Copy `dist/package/OrthoSystem.exe` to the isolated PC and run it directly.
 
 ## Suggested improvements before production
 
-- Add a backend delete endpoint for admin appointment removal.
-- Add environment-based backend URL configuration.
 - Add authentication for admin access.
-- Harden CORS and run on a specific trusted host.
 - Add more form validation and error handling.
 - Add a real installer or packaged distribution.
 

@@ -1,19 +1,28 @@
 import { useEffect, useState } from "react";
+import { Link } from "react-router-dom";
+import { API_BASE } from "./api.js";
+import { useToast } from "./Toast.jsx";
+
+function formatCurrency(value) {
+  if (value === null || value === undefined || value === "") return "—";
+  return `₱${Number(value).toLocaleString("en-PH", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+}
 
 function Admin() {
-
+  const { showToast, confirm } = useToast();
   const [appointments, setAppointments] = useState([]);
   const [loading, setLoading] = useState(true);
 
   const fetchAppointments = async () => {
     try {
       setLoading(true);
-      const res = await fetch("http://127.0.0.1:8000/appointments");
+      const res = await fetch(`${API_BASE}/appointments`);
+      if (!res.ok) throw new Error("Failed to load appointments");
       const data = await res.json();
       setAppointments(data);
     } catch (error) {
       console.error(error);
-      alert("❌ Error fetching appointments");
+      showToast("Error fetching appointments", "error");
     } finally {
       setLoading(false);
     }
@@ -24,98 +33,96 @@ function Admin() {
   }, []);
 
   const handleDelete = async (id) => {
-    if (window.confirm("Are you sure you want to delete this appointment?")) {
-      try {
-        const res = await fetch(`http://127.0.0.1:8000/appointments/${id}`, {
-          method: "DELETE",
-        });
-        const data = await res.json();
-        if (data.status === "success") {
-          alert("✅ Appointment deleted");
-          fetchAppointments();
-        } else {
-          alert("❌ " + data.message);
-        }
-      } catch (error) {
-        console.error(error);
-        alert("❌ Error deleting appointment");
+    const confirmed = await confirm({
+      title: "Delete appointment?",
+      message: "This will permanently remove the appointment record.",
+      confirmLabel: "Delete",
+    });
+    if (!confirmed) return;
+
+    try {
+      const res = await fetch(`${API_BASE}/appointments/${id}`, { method: "DELETE" });
+      const data = await res.json();
+      if (!res.ok) {
+        showToast(data.detail || data.message || "Delete failed", "error");
+        return;
       }
+      showToast("Appointment deleted", "success");
+      fetchAppointments();
+    } catch (error) {
+      console.error(error);
+      showToast("Error deleting appointment", "error");
     }
   };
 
   return (
-    <div className="min-h-screen bg-gray-100">
-
-      {/* NAVBAR */}
-      <nav className="flex justify-between items-center p-4 bg-white shadow">
-        <h1 className="text-2xl font-bold text-blue-600">Doc Jun - Admin</h1>
-        <a href="/" className="px-4 py-2 bg-gray-300 text-gray-800 rounded hover:bg-gray-400">
+    <div className="admin-page">
+      <nav className="admin-nav">
+        <h1>Doc Jun - Admin</h1>
+        <Link to="/" className="btn btn-back">
           Back to Booking
-        </a>
+        </Link>
       </nav>
 
-      {/* HEADER */}
-      <div className="bg-blue-600 text-white p-6">
-        <h2 className="text-3xl font-bold">Appointments Dashboard</h2>
-        <p className="mt-2">Manage all patient appointments</p>
+      <div className="admin-header">
+        <h2>Appointments Dashboard</h2>
+        <p>Manage all patient appointments and visit records</p>
       </div>
 
-      {/* CONTENT */}
-      <div className="max-w-6xl mx-auto p-6">
-
-        {/* REFRESH BUTTON */}
-        <div className="mb-6 flex gap-4">
-          <button
-            onClick={fetchAppointments}
-            className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700"
-          >
-            🔄 Refresh
+      <div className="admin-content">
+        <div className="admin-toolbar">
+          <button type="button" onClick={fetchAppointments} className="btn btn-refresh">
+            Refresh
           </button>
-          <div className="text-gray-700 font-semibold">
-            Total Appointments: {appointments.length}
-          </div>
+          <span className="admin-count">Total Appointments: {appointments.length}</span>
         </div>
 
-        {/* TABLE */}
         {loading ? (
-          <div className="text-center py-10 text-gray-600">Loading...</div>
+          <div className="admin-empty">Loading...</div>
         ) : appointments.length === 0 ? (
-          <div className="bg-white p-8 rounded-lg shadow text-center text-gray-600">
-            No appointments yet
-          </div>
+          <div className="admin-empty">No appointments yet</div>
         ) : (
-          <div className="bg-white rounded-lg shadow overflow-hidden">
-            <table className="w-full">
-              <thead className="bg-gray-200 border-b">
+          <div className="admin-table-wrap">
+            <table className="admin-table">
+              <thead>
                 <tr>
-                  <th className="px-6 py-3 text-left font-semibold text-gray-700">Name</th>
-                  <th className="px-6 py-3 text-left font-semibold text-gray-700">Phone</th>
-                  <th className="px-6 py-3 text-left font-semibold text-gray-700">Date</th>
-                  <th className="px-6 py-3 text-left font-semibold text-gray-700">Time</th>
-                  <th className="px-6 py-3 text-left font-semibold text-gray-700">Status</th>
-                  <th className="px-6 py-3 text-center font-semibold text-gray-700">Action</th>
+                  <th>Name</th>
+                  <th>Phone</th>
+                  <th>Address</th>
+                  <th>Age</th>
+                  <th>Date</th>
+                  <th>Time</th>
+                  <th>Procedure</th>
+                  <th>Payment</th>
+                  <th>Amount</th>
+                  <th>Status</th>
+                  <th>Checked In At</th>
+                  <th>Action</th>
                 </tr>
               </thead>
               <tbody>
-                {appointments.map((appt, index) => (
-                  <tr key={appt.id || index} className="border-b hover:bg-gray-50">
-                    <td className="px-6 py-4 text-gray-800">{appt.name}</td>
-                    <td className="px-6 py-4 text-gray-800">{appt.phone}</td>
-                    <td className="px-6 py-4 text-gray-800">{appt.date}</td>
-                    <td className="px-6 py-4 text-gray-800">{appt.time}</td>
-                    <td className="px-6 py-4">
-                      <span className={`px-3 py-1 rounded-full text-sm font-semibold ${
-                        appt.checked_in 
-                          ? "bg-green-200 text-green-800" 
-                          : "bg-yellow-200 text-yellow-800"
-                      }`}>
-                        {appt.checked_in ? "✅ Checked-In" : "⏳ Pending"}
+                {appointments.map((appt) => (
+                  <tr key={appt.id}>
+                    <td>{appt.name}</td>
+                    <td>{appt.phone || "—"}</td>
+                    <td>{appt.address || "—"}</td>
+                    <td>{appt.age ?? "—"}</td>
+                    <td>{appt.date}</td>
+                    <td>{appt.time}</td>
+                    <td>{appt.procedure || "—"}</td>
+                    <td>{appt.payment_method || "—"}</td>
+                    <td>{formatCurrency(appt.amount_paid)}</td>
+                    <td>
+                      <span className={`status-badge ${appt.checked_in ? "checked" : "pending"}`}>
+                        {appt.checked_in ? "Checked-In" : "Pending"}
                       </span>
                     </td>
-                    <td className="px-6 py-4 text-center">
+                    <td>{appt.checked_in_at || "—"}</td>
+                    <td>
                       <button
+                        type="button"
                         onClick={() => handleDelete(appt.id)}
-                        className="px-3 py-1 bg-red-500 text-white text-sm rounded hover:bg-red-600"
+                        className="btn btn-delete"
                       >
                         Delete
                       </button>
@@ -126,13 +133,9 @@ function Admin() {
             </table>
           </div>
         )}
-
       </div>
-
     </div>
   );
 }
-
-export default Admin;
 
 export default Admin;

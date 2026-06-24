@@ -1,20 +1,89 @@
-// App.jsx
-import React, { useEffect, useState } from 'react';
-import './App.css'; 
+import React, { useCallback, useEffect, useState } from "react";
+import { Link } from "react-router-dom";
+import { API_BASE } from "./api.js";
+import { useToast } from "./Toast.jsx";
+import "./App.css";
+
+const PAYMENT_METHODS = ["Cash", "GCash", "Bank Transfer", "Credit Card", "Debit Card", "Other"];
+const UPCOMING_THRESHOLD_MINUTES = 60;
+
+const emptyPatient = {
+  name: "",
+  address: "",
+  phone: "",
+  age: "",
+  date: "",
+  time: "",
+};
+
+const emptyVisit = {
+  appointmentId: "",
+  paymentMethod: "",
+  amountPaid: "",
+  procedure: "",
+};
 
 function App() {
+  const { showToast } = useToast();
   const [isLoading, setIsLoading] = useState(false);
-  const [name, setName] = useState("");
-  const [phone, setPhone] = useState("");
-  const [date, setDate] = useState("");
-  const [time, setTime] = useState("");
-  const [checkName, setCheckName] = useState("");
-  const [checkDate, setCheckDate] = useState("");
-  const [checkTime, setCheckTime] = useState("");
+  const [isCheckingIn, setIsCheckingIn] = useState(false);
+  const [patient, setPatient] = useState(emptyPatient);
+  const [visit, setVisit] = useState(emptyVisit);
+  const [pendingAppointments, setPendingAppointments] = useState([]);
   const [isExporting, setIsExporting] = useState(false);
+  const checkInRef = React.useRef(null);
 
-  const API_BASE = "http://127.0.0.1:8000";
-  const UPCOMING_THRESHOLD_MINUTES = 60;
+  const updatePatient = (field, value) => {
+    setPatient((prev) => ({ ...prev, [field]: value }));
+  };
+
+  const updateVisit = (field, value) => {
+    setVisit((prev) => ({ ...prev, [field]: value }));
+  };
+
+  const loadPendingAppointments = useCallback(async () => {
+    try {
+      const res = await fetch(`${API_BASE}/appointments`);
+      if (!res.ok) return;
+      const appointments = await res.json();
+      setPendingAppointments(appointments.filter((appt) => !appt.checked_in));
+    } catch (error) {
+      console.error("Failed to load pending appointments", error);
+    }
+  }, []);
+
+  const applyAppointmentToPatient = (appt) => {
+    setPatient({
+      name: appt.name || "",
+      address: appt.address || "",
+      phone: appt.phone || "",
+      age: appt.age ?? "",
+      date: appt.date || "",
+      time: appt.time || "",
+    });
+    setVisit((prev) => ({
+      ...prev,
+      appointmentId: String(appt.id),
+    }));
+  };
+
+  const handleSelectAppointment = (appointmentId) => {
+    updateVisit("appointmentId", appointmentId);
+
+    if (!appointmentId) {
+      setPatient(emptyPatient);
+      return;
+    }
+
+    const appt = pendingAppointments.find((item) => String(item.id) === appointmentId);
+    if (appt) {
+      applyAppointmentToPatient(appt);
+    }
+  };
+
+  const scrollToCheckIn = () => {
+    checkInRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
+  };
 
   const checkUpcomingAppointments = async () => {
     try {
@@ -30,7 +99,14 @@ function App() {
       });
 
       if (soon) {
-        alert(`Reminder: appointment for ${soon.name} is in ${Math.round((new Date(`${soon.date}T${soon.time}`) - now) / 1000 / 60)} minutes.`);
+        const minutesLeft = Math.round(
+          (new Date(`${soon.date}T${soon.time}`) - now) / 1000 / 60
+        );
+        showToast(
+          `Reminder: appointment for ${soon.name} is in ${minutesLeft} minutes.`,
+          "info",
+          6000
+        );
       }
     } catch (error) {
       console.error("Upcoming appointment check failed", error);
@@ -38,14 +114,22 @@ function App() {
   };
 
   useEffect(() => {
+    loadPendingAppointments();
     checkUpcomingAppointments();
     const interval = setInterval(checkUpcomingAppointments, 5 * 60 * 1000);
     return () => clearInterval(interval);
-  }, []);
+  }, [loadPendingAppointments]);
 
   const handleSubmit = async () => {
-    if (!name || !phone || !date || !time) {
-      alert("Please fill all fields");
+    const { name, address, phone, age, date, time } = patient;
+
+    if (!name || !address || !phone || !age || !date || !time) {
+      showToast("Please fill all booking fields", "warning");
+      return;
+    }
+
+    if (Number(age) < 0) {
+      showToast("Age must be a valid number", "warning");
       return;
     }
 
@@ -54,17 +138,28 @@ function App() {
       const res = await fetch(`${API_BASE}/appointments`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ name, phone, date, time }),
+        body: JSON.stringify({
+          name,
+          address,
+          phone,
+          age: Number(age),
+          date,
+          time,
+        }),
       });
       const data = await res.json();
       if (data.status === "error") {
-        alert("❌ " + data.message);
+        showToast(data.message, "error");
       } else {
-        alert("✅ " + data.message);
-        setName(""); setPhone(""); setDate(""); setTime("");
+        showToast("Appointment booked. Scroll down to complete check-in.", "success");
+        if (data.id) {
+          setVisit((prev) => ({ ...prev, appointmentId: String(data.id) }));
+        }
+        await loadPendingAppointments();
+        scrollToCheckIn();
       }
     } catch (error) {
-      alert("❌ Unable to reach backend. Start the server on http://127.0.0.1:8000.");
+      showToast(`Unable to reach backend. Start the server on ${API_BASE}.`, "error");
       console.error(error);
     } finally {
       setIsLoading(false);
@@ -72,26 +167,69 @@ function App() {
   };
 
   const handleCheckIn = async () => {
-    if (!checkName || !checkDate || !checkTime) {
-      alert("Fill all check-in fields");
+    const { name, address, phone, age, date, time } = patient;
+    const { appointmentId, paymentMethod, amountPaid, procedure } = visit;
+
+    if (!appointmentId) {
+      showToast("Select the patient's booked appointment first", "warning");
       return;
     }
 
+    if (
+      !name ||
+      !address ||
+      !phone ||
+      !age ||
+      !date ||
+      !time ||
+      !paymentMethod ||
+      amountPaid === "" ||
+      !procedure
+    ) {
+      showToast("Please fill all check-in fields", "warning");
+      return;
+    }
+
+    if (Number(age) < 0 || Number(amountPaid) < 0) {
+      showToast("Age and amount paid must be valid numbers", "warning");
+      return;
+    }
+
+    setIsCheckingIn(true);
     try {
-      const res = await fetch(
-        `${API_BASE}/checkin?name=${encodeURIComponent(checkName)}&date=${encodeURIComponent(checkDate)}&time=${encodeURIComponent(checkTime)}`,
-        { method: "POST" }
-      );
+      const res = await fetch(`${API_BASE}/checkin`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          appointment_id: appointmentId ? Number(appointmentId) : null,
+          name,
+          date,
+          time,
+          address,
+          phone,
+          age: Number(age),
+          payment_method: paymentMethod,
+          amount_paid: Number(amountPaid),
+          procedure,
+        }),
+      });
       const data = await res.json();
       if (data.status === "error") {
-        alert("❌ " + data.message);
+        showToast(data.message, "error");
       } else {
-        alert("✅ " + data.message);
-        setCheckName(""); setCheckDate(""); setCheckTime("");
+        showToast(
+          `${data.message}${data.checked_in_at ? ` at ${data.checked_in_at}` : ""}`,
+          "success"
+        );
+        setPatient(emptyPatient);
+        setVisit(emptyVisit);
+        await loadPendingAppointments();
       }
     } catch (error) {
-      alert("❌ Unable to reach backend. Start the server on http://127.0.0.1:8000.");
+      showToast(`Unable to reach backend. Start the server on ${API_BASE}.`, "error");
       console.error(error);
+    } finally {
+      setIsCheckingIn(false);
     }
   };
 
@@ -101,12 +239,12 @@ function App() {
       const res = await fetch(`${API_BASE}/export`, { method: "POST" });
       const data = await res.json();
       if (data.status === "success") {
-        alert("✅ Export complete: appointments.xlsx created.");
+        showToast("Export complete: appointments.xlsx created.", "success");
       } else {
-        alert("❌ " + (data.message || "Export failed"));
+        showToast(data.message || "Export failed", "error");
       }
     } catch (error) {
-      alert("❌ Unable to reach backend. Start the server on http://127.0.0.1:8000.");
+      showToast(`Unable to reach backend. Start the server on ${API_BASE}.`, "error");
       console.error(error);
     } finally {
       setIsExporting(false);
@@ -115,129 +253,246 @@ function App() {
 
   return (
     <div className="app">
-      {/* Brand Bar */}
       <div className="brand-bar">
         <h2>Dr. Jun Villaflores, DMD</h2>
-        <button
-          type="button"
-          className={`btn btn-extract ${isExporting ? 'btn-loading' : ''}`}
-          onClick={handleExport}
-          disabled={isExporting}
-        >
-          {isExporting ? 'Extracting...' : 'Extract'}
-        </button>
+        <div className="brand-actions">
+          <Link to="/admin" className="btn btn-admin">
+            Admin
+          </Link>
+          <button
+            type="button"
+            className={`btn btn-extract ${isExporting ? "btn-loading" : ""}`}
+            onClick={handleExport}
+            disabled={isExporting}
+          >
+            {isExporting ? "Extracting..." : "Extract"}
+          </button>
+        </div>
       </div>
 
-      {/* Hero Section */}
       <div className="hero">
         <h1>Your Smile, Our Priority</h1>
         <p>Book and check-in easily</p>
       </div>
 
-      {/* Forms Container */}
       <div className="container">
-        
-        {/* CARD 1: Book Appointment */}
         <div className="card">
           <h3>Book Appointment</h3>
-          <form>
+          <p className="card-subtitle">For new patients or future visits. After booking, complete check-in below.</p>
+          <form onSubmit={(e) => e.preventDefault()}>
             <div className="input-group">
               <input
                 type="text"
                 placeholder=" "
-                value={name}
-                onChange={(e) => setName(e.target.value)}
+                value={patient.name}
+                onChange={(e) => updatePatient("name", e.target.value)}
                 required
               />
               <label>Name</label>
             </div>
-            
+
             <div className="input-group">
               <input
-                type="tel"
+                type="text"
                 placeholder=" "
-                value={phone}
-                onChange={(e) => setPhone(e.target.value)}
+                value={patient.address}
+                onChange={(e) => updatePatient("address", e.target.value)}
                 required
               />
-              <label>Phone</label>
+              <label>Address</label>
             </div>
 
             <div className="input-group">
               <input
-                type="date"
+                type="tel"
                 placeholder=" "
-                value={date}
-                onChange={(e) => setDate(e.target.value)}
+                value={patient.phone}
+                onChange={(e) => updatePatient("phone", e.target.value)}
                 required
               />
-              <label>Appointment Date</label>
+              <label>Telephone</label>
+            </div>
+
+            <div className="input-row">
+              <div className="input-group">
+                <input
+                  type="number"
+                  min="0"
+                  max="150"
+                  placeholder=" "
+                  value={patient.age}
+                  onChange={(e) => updatePatient("age", e.target.value)}
+                  required
+                />
+                <label>Age</label>
+              </div>
+
+              <div className="input-group">
+                <input
+                  type="date"
+                  placeholder=" "
+                  value={patient.date}
+                  onChange={(e) => updatePatient("date", e.target.value)}
+                  required
+                />
+                <label>Appointment Date</label>
+              </div>
             </div>
 
             <div className="input-group">
               <input
                 type="time"
                 placeholder=" "
-                value={time}
-                onChange={(e) => setTime(e.target.value)}
+                value={patient.time}
+                onChange={(e) => updatePatient("time", e.target.value)}
                 required
               />
               <label>Appointment Time</label>
             </div>
 
-            {/* MODIFIED BUTTON FOR SPINNER */}
-            <button 
-              type="button" 
-              className={`btn btn-confirm ${isLoading ? 'btn-loading' : ''}`}
+            <button
+              type="button"
+              className={`btn btn-confirm ${isLoading ? "btn-loading" : ""}`}
               onClick={handleSubmit}
+              disabled={isLoading}
             >
-              {isLoading ? 'Processing...' : 'Confirm'}
+              {isLoading ? "Processing..." : "Confirm"}
             </button>
           </form>
         </div>
 
-        {/* CARD 2: Check-In */}
-        <div className="card">
-          <h3 style={{textAlign: 'center'}}>Check-In</h3>
-          <form>
+        <div className="card checkin-card" ref={checkInRef} id="checkin-card">
+          <h3>Patient Check-In</h3>
+          <p className="card-subtitle">
+            When the patient arrives: select their appointment, enter payment details, then check in.
+          </p>
+          <form onSubmit={(e) => e.preventDefault()}>
+            <div className="checkin-steps">
+              <span className="step-badge">Step 1</span>
+              <span className="step-text">Select appointment</span>
+            </div>
+            <div className="input-group">
+              <select
+                className={visit.appointmentId ? "has-value" : ""}
+                value={visit.appointmentId}
+                onChange={(e) => handleSelectAppointment(e.target.value)}
+                required
+              >
+                <option value="" disabled>
+                  Select booked appointment
+                </option>
+                {pendingAppointments.length === 0 ? (
+                  <option value="" disabled>
+                    No pending appointments — book one above first
+                  </option>
+                ) : (
+                  pendingAppointments.map((appt) => (
+                    <option key={appt.id} value={appt.id}>
+                      {appt.name} — {appt.date} at {appt.time}
+                    </option>
+                  ))
+                )}
+              </select>
+              <label>Booked Appointment</label>
+            </div>
+
+            <div className="checkin-steps">
+              <span className="step-badge">Step 2</span>
+              <span className="step-text">Confirm patient details</span>
+            </div>
+            {!visit.appointmentId ? (
+              <div className="checkin-empty">
+                Select an appointment to load the patient's details.
+              </div>
+            ) : (
+              <div className="checkin-summary">
+              <div className="summary-item">
+                <span className="summary-label">Name</span>
+                <span className="summary-value">{patient.name || "—"}</span>
+              </div>
+              <div className="summary-item">
+                <span className="summary-label">Address</span>
+                <span className="summary-value">{patient.address || "—"}</span>
+              </div>
+              <div className="summary-item">
+                <span className="summary-label">Telephone</span>
+                <span className="summary-value">{patient.phone || "—"}</span>
+              </div>
+              <div className="summary-row">
+                <div className="summary-item">
+                  <span className="summary-label">Age</span>
+                  <span className="summary-value">{patient.age !== "" ? patient.age : "—"}</span>
+                </div>
+                <div className="summary-item">
+                  <span className="summary-label">Appointment Date</span>
+                  <span className="summary-value">{patient.date || "—"}</span>
+                </div>
+              </div>
+              <div className="summary-item">
+                <span className="summary-label">Appointment Time</span>
+                <span className="summary-value">{patient.time || "—"}</span>
+              </div>
+              </div>
+            )}
+
+            <div className="checkin-steps">
+              <span className="step-badge">Step 3</span>
+              <span className="step-text">Enter visit payment details</span>
+            </div>
+            <div className="input-row">
+              <div className="input-group">
+                <input
+                  type="number"
+                  min="0"
+                  step="0.01"
+                  placeholder=" "
+                  value={visit.amountPaid}
+                  onChange={(e) => updateVisit("amountPaid", e.target.value)}
+                  required
+                />
+                <label>Amount Paid</label>
+              </div>
+
+              <div className="input-group">
+                <select
+                  value={visit.paymentMethod}
+                  onChange={(e) => updateVisit("paymentMethod", e.target.value)}
+                  required
+                >
+                  <option value="" disabled>
+                    Select payment method
+                  </option>
+                  {PAYMENT_METHODS.map((method) => (
+                    <option key={method} value={method}>
+                      {method}
+                    </option>
+                  ))}
+                </select>
+                <label>Payment Method</label>
+              </div>
+            </div>
+
             <div className="input-group">
               <input
                 type="text"
                 placeholder=" "
-                value={checkName}
-                onChange={(e) => setCheckName(e.target.value)}
+                value={visit.procedure}
+                onChange={(e) => updateVisit("procedure", e.target.value)}
                 required
               />
-              <label>Name</label>
+              <label>Procedure</label>
             </div>
 
-            <div className="input-group">
-              <input
-                type="date"
-                placeholder=" "
-                value={checkDate}
-                onChange={(e) => setCheckDate(e.target.value)}
-                required
-              />
-              <label>Date</label>
-            </div>
-
-            <div className="input-group">
-              <input
-                type="time"
-                placeholder=" "
-                value={checkTime}
-                onChange={(e) => setCheckTime(e.target.value)}
-                required
-              />
-              <label>Time</label>
-            </div>
-
-            {/* ADDED SPINNER HERE TOO IF YOU WANT */}
-            <button type="button" className="btn btn-checkin" onClick={handleCheckIn}>Check-In</button>
+            <button
+              type="button"
+              className={`btn btn-checkin ${isCheckingIn ? "btn-loading" : ""}`}
+              onClick={handleCheckIn}
+              disabled={isCheckingIn || !visit.appointmentId}
+            >
+              {isCheckingIn ? "Checking in..." : "Check-In"}
+            </button>
           </form>
         </div>
-
       </div>
     </div>
   );
