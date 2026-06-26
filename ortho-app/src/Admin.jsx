@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
-import { Link } from "react-router-dom";
 import { API_BASE } from "./api.js";
 import { useToast } from "./Toast.jsx";
+import AdminNav from "./AdminNav.jsx";
 
 function formatCurrency(value) {
   if (value === null || value === undefined || value === "") return "—";
@@ -16,7 +16,7 @@ function Admin() {
   const fetchAppointments = async () => {
     try {
       setLoading(true);
-      const res = await fetch(`${API_BASE}/appointments`);
+      const res = await fetch(`${API_BASE}/appointments/all`);
       if (!res.ok) throw new Error("Failed to load appointments");
       const data = await res.json();
       setAppointments(data);
@@ -57,24 +57,17 @@ function Admin() {
 
   return (
     <div className="admin-page">
-      <nav className="admin-nav">
-        <h1>Doc Jun - Admin</h1>
-        <Link to="/" className="btn btn-back">
-          Back to Booking
-        </Link>
-      </nav>
-
-      <div className="admin-header">
-        <h2>Appointments Dashboard</h2>
-        <p>Manage all patient appointments and visit records</p>
-      </div>
+      <AdminNav
+        title="Appointments Dashboard"
+        subtitle="Manage bookings, check-ins, and visit records"
+      />
 
       <div className="admin-content">
         <div className="admin-toolbar">
           <button type="button" onClick={fetchAppointments} className="btn btn-refresh">
             Refresh
           </button>
-          <span className="admin-count">Total Appointments: {appointments.length}</span>
+          <span className="admin-count">Total Records: {appointments.length}</span>
         </div>
 
         {loading ? (
@@ -94,7 +87,8 @@ function Admin() {
                   <th>Time</th>
                   <th>Procedure</th>
                   <th>Payment</th>
-                  <th>Amount</th>
+                  <th>Debit</th>
+                  <th>Credit</th>
                   <th>Status</th>
                   <th>Checked In At</th>
                   <th>Action</th>
@@ -111,6 +105,7 @@ function Admin() {
                     <td>{appt.time}</td>
                     <td>{appt.procedure || "—"}</td>
                     <td>{appt.payment_method || "—"}</td>
+                    <td>{formatCurrency(appt.debit)}</td>
                     <td>{formatCurrency(appt.amount_paid)}</td>
                     <td>
                       <span className={`status-badge ${appt.checked_in ? "checked" : "pending"}`}>

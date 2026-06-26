@@ -23,6 +23,18 @@ This app is functional for local use, but it is not yet production-grade.
 - Export appointments to `appointments.xlsx` (includes all visit fields)
 - Frontend uses relative API URL in production; dev mode uses `http://127.0.0.1:8000`
 
+### Paper record migration
+
+- **Admin → Import Records** — upload Excel/CSV, preview validation, then import
+- **Admin → Patients** — view patient profiles and visit ledgers with running balance
+- Download the import template from the Import page (`/import/template`)
+- One spreadsheet row = one visit line from the paper card
+- Export now creates two sheets: `Patients` and `Visits`
+
+### Import template columns
+
+`name`, `phone`, `address`, `age`, `occupation`, `status`, `complaint`, `visit_date`, `visit_time`, `visit_no`, `description`, `debit`, `credit_amount`, `credit_date`, `payment_method`, `checked_in_at`
+
 ### Known gaps and issues
 
 - No authentication or access control.

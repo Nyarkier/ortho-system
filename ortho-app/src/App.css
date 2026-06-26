@@ -459,6 +459,10 @@ body {
   background: #fef3c7;
   color: #92400e;
 }
+.status-badge.error {
+  background: #fee2e2;
+  color: #991b1b;
+}
 .btn-back,
 .btn-refresh {
   width: auto !important;
@@ -488,6 +492,119 @@ body {
 }
 .btn-delete:hover {
   background: #dc2626;
+}
+
+.admin-tabs {
+  display: flex;
+  gap: 8px;
+  padding: 0 24px 16px;
+  max-width: 1400px;
+  margin: 0 auto;
+  background: var(--primary-blue);
+}
+
+.admin-tab {
+  padding: 8px 14px;
+  border-radius: 999px;
+  text-decoration: none;
+  color: rgba(255, 255, 255, 0.85);
+  font-size: 0.9rem;
+  font-weight: 600;
+  background: rgba(255, 255, 255, 0.12);
+}
+
+.admin-tab.active,
+.admin-tab:hover {
+  background: white;
+  color: var(--primary-blue);
+}
+
+.btn-view {
+  width: auto !important;
+  display: inline-flex;
+  padding: 6px 10px;
+  font-size: 0.8rem;
+  border-radius: 6px;
+  background: #2563eb;
+  color: white;
+  text-decoration: none;
+}
+
+.btn-view:hover {
+  background: #1d4ed8;
+}
+
+.patient-profile {
+  margin-bottom: 20px;
+}
+
+.profile-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 16px;
+}
+
+.profile-grid span {
+  display: block;
+  font-size: 0.78rem;
+  font-weight: 600;
+  color: #6b7280;
+  text-transform: uppercase;
+  margin-bottom: 4px;
+}
+
+.profile-grid strong {
+  color: #111827;
+  font-size: 0.98rem;
+}
+
+.pending-card {
+  margin-bottom: 20px;
+}
+
+.pending-list {
+  margin: 0;
+  padding-left: 20px;
+  color: #374151;
+}
+
+.import-card {
+  margin-bottom: 20px;
+}
+
+.import-upload {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  align-items: center;
+}
+
+.import-summary {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 16px;
+  margin-bottom: 16px;
+  font-weight: 600;
+}
+
+.summary-ok { color: #059669; }
+.summary-warn { color: #d97706; }
+.summary-error { color: #dc2626; }
+
+.admin-empty-cell {
+  text-align: center;
+  color: #6b7280;
+  padding: 24px !important;
+}
+
+.ledger-table {
+  min-width: 1000px;
+}
+
+@media (max-width: 900px) {
+  .profile-grid {
+    grid-template-columns: 1fr;
+  }
 }
 
 .toast-container {

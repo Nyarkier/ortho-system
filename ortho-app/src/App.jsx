@@ -12,6 +12,9 @@ const emptyPatient = {
   address: "",
   phone: "",
   age: "",
+  occupation: "",
+  status: "",
+  complaint: "",
   date: "",
   time: "",
 };
@@ -58,6 +61,9 @@ function App() {
       address: appt.address || "",
       phone: appt.phone || "",
       age: appt.age ?? "",
+      occupation: appt.occupation || "",
+      status: appt.status || "",
+      complaint: appt.complaint || "",
       date: appt.date || "",
       time: appt.time || "",
     });
@@ -121,7 +127,7 @@ function App() {
   }, [loadPendingAppointments]);
 
   const handleSubmit = async () => {
-    const { name, address, phone, age, date, time } = patient;
+    const { name, address, phone, age, occupation, status, complaint, date, time } = patient;
 
     if (!name || !address || !phone || !age || !date || !time) {
       showToast("Please fill all booking fields", "warning");
@@ -143,6 +149,9 @@ function App() {
           address,
           phone,
           age: Number(age),
+          occupation: occupation || null,
+          status: status || null,
+          complaint: complaint || null,
           date,
           time,
         }),
@@ -167,7 +176,7 @@ function App() {
   };
 
   const handleCheckIn = async () => {
-    const { name, address, phone, age, date, time } = patient;
+    const { name, address, phone, age, occupation, status, complaint, date, time } = patient;
     const { appointmentId, paymentMethod, amountPaid, procedure } = visit;
 
     if (!appointmentId) {
@@ -208,6 +217,9 @@ function App() {
           address,
           phone,
           age: Number(age),
+          occupation: occupation || null,
+          status: status || null,
+          complaint: complaint || null,
           payment_method: paymentMethod,
           amount_paid: Number(amountPaid),
           procedure,
@@ -316,6 +328,38 @@ function App() {
             <div className="input-row">
               <div className="input-group">
                 <input
+                  type="text"
+                  placeholder=" "
+                  value={patient.occupation}
+                  onChange={(e) => updatePatient("occupation", e.target.value)}
+                />
+                <label>Occupation</label>
+              </div>
+
+              <div className="input-group">
+                <input
+                  type="text"
+                  placeholder=" "
+                  value={patient.status}
+                  onChange={(e) => updatePatient("status", e.target.value)}
+                />
+                <label>Status</label>
+              </div>
+            </div>
+
+            <div className="input-group">
+              <input
+                type="text"
+                placeholder=" "
+                value={patient.complaint}
+                onChange={(e) => updatePatient("complaint", e.target.value)}
+              />
+              <label>Complaint</label>
+            </div>
+
+            <div className="input-row">
+              <div className="input-group">
+                <input
                   type="number"
                   min="0"
                   max="150"
@@ -417,6 +461,18 @@ function App() {
               <div className="summary-item">
                 <span className="summary-label">Telephone</span>
                 <span className="summary-value">{patient.phone || "—"}</span>
+              </div>
+              <div className="summary-item">
+                <span className="summary-label">Occupation</span>
+                <span className="summary-value">{patient.occupation || "—"}</span>
+              </div>
+              <div className="summary-item">
+                <span className="summary-label">Status</span>
+                <span className="summary-value">{patient.status || "—"}</span>
+              </div>
+              <div className="summary-item">
+                <span className="summary-label">Complaint</span>
+                <span className="summary-value">{patient.complaint || "—"}</span>
               </div>
               <div className="summary-row">
                 <div className="summary-item">

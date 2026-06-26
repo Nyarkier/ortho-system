@@ -3,6 +3,9 @@ import ReactDOM from "react-dom/client";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
 import App from "./App.jsx";
 import Admin from "./Admin.jsx";
+import Patients from "./Patients.jsx";
+import PatientDetail from "./PatientDetail.jsx";
+import ImportRecords from "./ImportRecords.jsx";
 import { ToastProvider } from "./Toast.jsx";
 import "./App.css";
 import "./index.css";
@@ -14,6 +17,9 @@ ReactDOM.createRoot(document.getElementById("root")).render(
         <Routes>
           <Route path="/" element={<App />} />
           <Route path="/admin" element={<Admin />} />
+          <Route path="/admin/patients" element={<Patients />} />
+          <Route path="/admin/patients/:id" element={<PatientDetail />} />
+          <Route path="/admin/import" element={<ImportRecords />} />
         </Routes>
       </BrowserRouter>
     </ToastProvider>
