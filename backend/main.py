@@ -75,6 +75,8 @@ app.add_middleware(
         "http://localhost:8000",
         "http://localhost:5173",
         "http://127.0.0.1:5173",
+        "http://localhost:3000",
+        "http://127.0.0.1:3000",
     ],
     allow_credentials=True,
     allow_methods=["*"],
@@ -139,7 +141,8 @@ def init_db():
             occupation TEXT,
             status TEXT,
             complaint TEXT,
-            created_at TEXT NOT NULL
+            created_at TEXT NOT NULL,
+            balance_adjustment REAL DEFAULT 0
         )
         """
     )
@@ -163,7 +166,17 @@ def init_db():
         """
     )
     conn.commit()
+    ensure_patient_balance_adjustment_column()
     migrate_legacy_appointments()
+
+
+def ensure_patient_balance_adjustment_column():
+    try:
+        cursor.execute("ALTER TABLE patients ADD COLUMN balance_adjustment REAL DEFAULT 0")
+        conn.commit()
+    except sqlite3.OperationalError as exc:
+        if "duplicate column name" not in str(exc).lower():
+            raise
 
 
 def migrate_legacy_appointments():
@@ -276,6 +289,7 @@ def patient_to_dict(row: tuple) -> dict:
         "status": row[6],
         "complaint": row[7],
         "created_at": row[8],
+        "balance_adjustment": row[9] if len(row) > 9 else 0,
         "balance": balance,
     }
 
@@ -355,7 +369,12 @@ def compute_patient_balance(patient_id: int) -> float:
         "SELECT debit, credit_amount FROM visits WHERE patient_id = ? AND is_pending = 0",
         (patient_id,),
     ).fetchall()
-    return round(sum(safe_float(r[0]) - safe_float(r[1]) for r in rows), 2)
+    adjustment_row = cursor.execute(
+        "SELECT balance_adjustment FROM patients WHERE id = ?",
+        (patient_id,),
+    ).fetchone()
+    adjustment = safe_float(adjustment_row[0] if adjustment_row else 0)
+    return round(sum(safe_float(r[0]) - safe_float(r[1]) for r in rows) + adjustment, 2)
 
 
 def get_visit_history(patient_id: int) -> list[dict]:
@@ -582,9 +601,9 @@ class CheckInRequest(BaseModel):
     occupation: str | None = None
     status: str | None = None
     complaint: str | None = None
-    payment_method: str = Field(min_length=1)
+    debit: float = Field(ge=0)
     amount_paid: float = Field(ge=0)
-    debit: float | None = None
+    payment_method: str = Field(min_length=1)
     procedure: str = Field(min_length=1)
 
 
@@ -598,8 +617,24 @@ class PatientUpdate(BaseModel):
     complaint: str | None = None
 
 
+class BalanceAdjustmentRequest(BaseModel):
+    amount: float = Field(ge=0)
+
+
 class ImportConfirmRequest(BaseModel):
     rows: list[dict]
+
+
+class VisitUpdate(BaseModel):
+    visit_date: str | None = None
+    visit_time: str | None = None
+    visit_no: int | None = None
+    description: str | None = None
+    debit: float | None = None
+    credit_amount: float | None = None
+    credit_date: str | None = None
+    payment_method: str | None = None
+    checked_in_at: str | None = None
 
 
 @app.post("/appointments")
@@ -699,7 +734,9 @@ def check_in(payload: CheckInRequest):
         complaint=payload.complaint,
     )
     checked_in_at = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-    debit = payload.debit if payload.debit is not None else payload.amount_paid
+
+    if payload.amount_paid > payload.debit:
+        return {"status": "error", "message": "Amount paid cannot exceed total charge."}
 
     cursor.execute(
         """
@@ -721,7 +758,7 @@ def check_in(payload: CheckInRequest):
             payload.date,
             normalize_time(payload.time),
             payload.procedure.strip(),
-            debit,
+            payload.debit,
             payload.amount_paid,
             payload.date,
             payload.payment_method.strip(),
@@ -741,6 +778,60 @@ def delete_appointment(appointment_id: int):
     cursor.execute("DELETE FROM visits WHERE id = ?", (appointment_id,))
     conn.commit()
     return {"status": "success", "message": "Appointment deleted"}
+
+
+@app.put("/visits/{visit_id}")
+def update_visit(visit_id: int, payload: VisitUpdate):
+    row = cursor.execute("SELECT * FROM visits WHERE id = ?", (visit_id,)).fetchone()
+    if not row:
+        raise HTTPException(status_code=404, detail="Visit not found")
+
+    existing = visit_to_dict(row)
+    debit = safe_float(payload.debit if payload.debit is not None else existing["debit"])
+    credit_amount = safe_float(payload.credit_amount if payload.credit_amount is not None else existing["credit_amount"])
+    if credit_amount > debit:
+        return {"status": "error", "message": "Amount paid cannot exceed total charge."}
+
+    visit_date = payload.visit_date if payload.visit_date is not None else existing["visit_date"]
+    visit_time = normalize_time(payload.visit_time) if payload.visit_time is not None else existing["visit_time"]
+    visit_no = payload.visit_no if payload.visit_no is not None else existing["visit_no"]
+    description = payload.description if payload.description is not None else existing["description"]
+    payment_method = payload.payment_method.strip() if payload.payment_method is not None else existing["payment_method"]
+    payment_method = payment_method or None
+    credit_date = payload.credit_date if payload.credit_date is not None else existing["credit_date"]
+    if credit_amount > 0 and not credit_date:
+        credit_date = datetime.now().strftime("%Y-%m-%d")
+    checked_in_at = payload.checked_in_at if payload.checked_in_at is not None else existing["checked_in_at"]
+
+    cursor.execute(
+        """
+        UPDATE visits
+        SET visit_date = ?,
+            visit_time = ?,
+            visit_no = ?,
+            description = ?,
+            debit = ?,
+            credit_amount = ?,
+            credit_date = ?,
+            payment_method = ?,
+            checked_in_at = ?
+        WHERE id = ?
+        """,
+        (
+            visit_date,
+            visit_time,
+            visit_no,
+            description,
+            debit,
+            credit_amount,
+            credit_date,
+            payment_method,
+            checked_in_at,
+            visit_id,
+        ),
+    )
+    conn.commit()
+    return {"status": "success", "message": "Visit updated"}
 
 
 @app.get("/patients")
@@ -788,6 +879,32 @@ def update_patient(patient_id: int, payload: PatientUpdate):
     )
     conn.commit()
     return {"status": "success", "message": "Patient updated"}
+
+
+@app.post("/patients/{patient_id}/adjust-balance")
+def adjust_patient_balance(patient_id: int, payload: BalanceAdjustmentRequest):
+    if not get_patient(patient_id):
+        raise HTTPException(status_code=404, detail="Patient not found")
+    if payload.amount <= 0:
+        return {"status": "error", "message": "Amount must be greater than zero."}
+
+    adjustment_row = cursor.execute(
+        "SELECT balance_adjustment FROM patients WHERE id = ?",
+        (patient_id,),
+    ).fetchone()
+    current_adjustment = safe_float(adjustment_row[0] if adjustment_row else 0)
+    new_adjustment = current_adjustment - payload.amount
+
+    cursor.execute(
+        "UPDATE patients SET balance_adjustment = ? WHERE id = ?",
+        (new_adjustment, patient_id),
+    )
+    conn.commit()
+    return {
+        "status": "success",
+        "message": "Balance reduced",
+        "balance": compute_patient_balance(patient_id),
+    }
 
 
 @app.delete("/patients/{patient_id}")

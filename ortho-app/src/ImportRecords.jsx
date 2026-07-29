@@ -89,7 +89,11 @@ function ImportRecords() {
           <p className="card-subtitle">
             Use one row per visit. Repeat patient details on each row from the paper card.
           </p>
-          <a href={`${API_BASE}/import/template`} className="btn btn-refresh">
+          <a
+            href={`${API_BASE}/import/template`}
+            className="btn btn-refresh"
+            download="import-template.xlsx"
+          >
             Download Excel Template
           </a>
         </div>

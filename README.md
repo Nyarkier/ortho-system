@@ -136,9 +136,9 @@ That script will:
 - run `npm run build` in `ortho-app`
 - package `backend/main.py` into a single executable with PyInstaller
 - include the built frontend assets inside the executable
-- place the output in `dist/package/OrthoSystem.exe`
+- place the output in `dist/package/Appointment.exe`
 
-Copy `dist/package/OrthoSystem.exe` to the isolated PC and run it directly.
+Copy `dist/package/Appointment.exe` to the isolated PC and run it directly.
 
 ## Suggested improvements before production
 

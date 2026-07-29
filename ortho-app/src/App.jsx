@@ -4,7 +4,15 @@ import { API_BASE } from "./api.js";
 import { useToast } from "./Toast.jsx";
 import "./App.css";
 
-const PAYMENT_METHODS = ["Cash", "GCash", "Bank Transfer", "Credit Card", "Debit Card", "Other"];
+const PAYMENT_METHODS = [
+  "Cash",
+  "GCash",
+  "Bank Transfer",
+  "Credit Card",
+  "Debit Card",
+  "Installment",
+  "Other",
+];
 const UPCOMING_THRESHOLD_MINUTES = 60;
 
 const emptyPatient = {
@@ -21,6 +29,7 @@ const emptyPatient = {
 
 const emptyVisit = {
   appointmentId: "",
+  debit: "",
   paymentMethod: "",
   amountPaid: "",
   procedure: "",
@@ -192,6 +201,7 @@ function App() {
       !date ||
       !time ||
       !paymentMethod ||
+      visit.debit === "" ||
       amountPaid === "" ||
       !procedure
     ) {
@@ -199,8 +209,15 @@ function App() {
       return;
     }
 
-    if (Number(age) < 0 || Number(amountPaid) < 0) {
-      showToast("Age and amount paid must be valid numbers", "warning");
+    const charge = Number(visit.debit);
+    const paid = Number(amountPaid);
+    if (Number(age) < 0 || charge < 0 || paid < 0) {
+      showToast("Age, charge, and amount paid must be valid numbers", "warning");
+      return;
+    }
+
+    if (paid > charge) {
+      showToast("Amount paid cannot exceed total charge", "warning");
       return;
     }
 
@@ -220,6 +237,7 @@ function App() {
           occupation: occupation || null,
           status: status || null,
           complaint: complaint || null,
+          debit: Number(visit.debit),
           payment_method: paymentMethod,
           amount_paid: Number(amountPaid),
           procedure,
@@ -354,7 +372,7 @@ function App() {
                 value={patient.complaint}
                 onChange={(e) => updatePatient("complaint", e.target.value)}
               />
-              <label>Complaint</label>
+              <label>Purpose</label>
             </div>
 
             <div className="input-row">
@@ -471,7 +489,7 @@ function App() {
                 <span className="summary-value">{patient.status || "—"}</span>
               </div>
               <div className="summary-item">
-                <span className="summary-label">Complaint</span>
+                <span className="summary-label">Purpose</span>
                 <span className="summary-value">{patient.complaint || "—"}</span>
               </div>
               <div className="summary-row">
@@ -502,13 +520,28 @@ function App() {
                   min="0"
                   step="0.01"
                   placeholder=" "
+                  value={visit.debit}
+                  onChange={(e) => updateVisit("debit", e.target.value)}
+                  required
+                />
+                <label>Total Charge</label>
+              </div>
+
+              <div className="input-group">
+                <input
+                  type="number"
+                  min="0"
+                  step="0.01"
+                  placeholder=" "
                   value={visit.amountPaid}
                   onChange={(e) => updateVisit("amountPaid", e.target.value)}
                   required
                 />
                 <label>Amount Paid</label>
               </div>
+            </div>
 
+            <div className="input-row">
               <div className="input-group">
                 <select
                   value={visit.paymentMethod}
@@ -527,6 +560,14 @@ function App() {
                 <label>Payment Method</label>
               </div>
             </div>
+
+            {visit.debit !== "" && visit.amountPaid !== "" && (
+              <div className="installment-summary">
+                <p>
+                  Remaining balance: ₱{Math.max(0, Number(visit.debit) - Number(visit.amountPaid)).toFixed(2)}
+                </p>
+              </div>
+            )}
 
             <div className="input-group">
               <input

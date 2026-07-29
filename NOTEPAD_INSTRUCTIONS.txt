@@ -1,0 +1,41 @@
+Ortho System Instructions
+
+1. Start the backend server:
+   - Open PowerShell in d:\Systemsssss\ortho-system\backend
+   - Optionally create a Python virtual environment:
+     python -m venv .venv
+     .\.venv\Scripts\Activate.ps1
+   - Install Python packages:
+     python -m pip install -r ..\requirements.txt
+   - Run the backend:
+     python main.py
+
+2. Start the frontend app:
+   - Open PowerShell in d:\Systemsssss\ortho-system\ortho-app
+   - Install Node packages:
+     npm install
+   - Run the frontend:
+     npm run dev
+   - Open the browser address shown by Vite, usually http://localhost:5173
+
+3. Book an appointment:
+   - Enter patient name, address, phone, age, occupation, status
+   - Enter patient purpose
+   - Choose date and time
+   - Click Confirm
+
+4. Check in the patient:
+   - Select the booked appointment from the list
+   - Confirm the patient details shown
+   - Enter the charge amount
+   - Choose payment method
+   - Enter amount paid
+   - Enter procedure/service
+   - Click Check in
+
+5. Notes:
+   - Run backend first, then frontend.
+   - Book appointment before check-in.
+   - If a time is already booked, choose a different date/time.
+   - Use import only for valid spreadsheet files.
+   - Export saves data to appointments.xlsx.
