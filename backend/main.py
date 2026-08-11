@@ -1,7 +1,7 @@
 import io
 import sys
 import webbrowser
-from datetime import datetime
+from datetime import date, datetime
 from pathlib import Path
 
 import pandas as pd
@@ -111,6 +111,28 @@ def normalize_phone(value: str | None) -> str:
     return "".join(ch for ch in str(value) if ch.isdigit())
 
 
+def normalize_import_value(value) -> str:
+    if value is None:
+        return ""
+    if isinstance(value, str):
+        text = value.strip()
+        if text.lower() in {"", "nan", "none", "null"}:
+            return ""
+        return text
+    if isinstance(value, (datetime, date)):
+        return value.strftime("%Y-%m-%d")
+    if isinstance(value, float) and pd.isna(value):
+        return ""
+    if isinstance(value, pd.Timestamp):
+        if pd.isna(value):
+            return ""
+        return value.strftime("%Y-%m-%d")
+    text = str(value).strip()
+    if text.lower() in {"", "nan", "none", "null"}:
+        return ""
+    return text
+
+
 def safe_float(value) -> float:
     if value is None or value == "":
         return 0.0
@@ -164,6 +186,9 @@ def init_db():
             FOREIGN KEY (patient_id) REFERENCES patients(id)
         )
         """
+    )
+    cursor.execute(
+        "CREATE INDEX IF NOT EXISTS idx_visits_pending_date_time ON visits(is_pending, visit_date, visit_time)"
     )
     conn.commit()
     ensure_patient_balance_adjustment_column()
@@ -438,21 +463,82 @@ def normalize_dataframe_columns(df: pd.DataFrame) -> pd.DataFrame:
     return df.rename(columns=renamed)
 
 
+def load_import_dataframe(content: bytes, filename: str) -> pd.DataFrame:
+    filename = (filename or "").lower()
+    buffer = io.BytesIO(content)
+
+    if filename.endswith(".csv"):
+        return pd.read_csv(buffer, dtype=str, keep_default_na=False, encoding="utf-8-sig")
+
+    if filename.endswith(".xls"):
+        try:
+            return pd.read_excel(buffer, engine="xlrd", dtype=str)
+        except ImportError as exc:
+            raise RuntimeError("Excel .xls files need the xlrd package. Please save the file as .xlsx or install xlrd.") from exc
+
+    try:
+        return pd.read_excel(buffer, engine="openpyxl", dtype=str)
+    except Exception:
+        buffer.seek(0)
+        return pd.read_excel(buffer, dtype=str)
+
+
 def parse_import_rows(df: pd.DataFrame) -> list[dict]:
     df = normalize_dataframe_columns(df)
     rows = []
     for index, raw in df.iterrows():
-        row = {col: raw.get(col, "") for col in IMPORT_COLUMNS}
+        row = {col: normalize_import_value(raw.get(col, "")) for col in IMPORT_COLUMNS}
         row["row_number"] = int(index) + 2
         rows.append(row)
     return rows
 
 
+def group_import_rows(rows: list[dict]) -> list[dict]:
+    """Group rows into patient groups using phone-first then name fallback."""
+    groups: dict[str, list[dict]] = {}
+    order: list[str] = []
+    for row in rows:
+        phone = normalize_phone(row.get("phone"))
+        name = normalize_name(row.get("name"))
+        key = None
+        if phone:
+            key = f"phone:{phone}"
+        elif name:
+            key = f"name:{name}"
+        else:
+            # fallback to row number unique key
+            key = f"row:{row.get('row_number')}"
+
+        if key not in groups:
+            groups[key] = []
+            order.append(key)
+        groups[key].append(row)
+
+    result = []
+    for key in order:
+        grp_rows = groups[key]
+        # use first row as representative patient info
+        rep = grp_rows[0]
+        result.append(
+            {
+                "key": key,
+                "patient": {
+                    "name": rep.get("name", ""),
+                    "phone": rep.get("phone", ""),
+                    "address": rep.get("address", ""),
+                    "age": rep.get("age", ""),
+                },
+                "rows": grp_rows,
+            }
+        )
+    return result
+
+
 def validate_import_row(row: dict, seen_keys: set[str]) -> dict:
     issues = []
-    name = str(row.get("name", "")).strip()
-    phone = str(row.get("phone", "")).strip()
-    visit_date = str(row.get("visit_date", "")).strip()
+    name = normalize_import_value(row.get("name")).strip()
+    phone = normalize_import_value(row.get("phone")).strip()
+    visit_date = normalize_import_value(row.get("visit_date")).strip()
     visit_time = normalize_time(row.get("visit_time"))
 
     if not name:
@@ -500,7 +586,7 @@ def validate_import_row(row: dict, seen_keys: set[str]) -> dict:
         status = "warning"
 
     return {
-        "row_number": row["row_number"],
+        "row_number": row.get("row_number"),
         "data": row,
         "issues": issues,
         "status": status,
@@ -625,6 +711,11 @@ class ImportConfirmRequest(BaseModel):
     rows: list[dict]
 
 
+class MergePatientsRequest(BaseModel):
+    source_id: int
+    target_id: int
+
+
 class VisitUpdate(BaseModel):
     visit_date: str | None = None
     visit_time: str | None = None
@@ -689,6 +780,56 @@ def get_appointments():
         patient = get_patient(row[1])
         results.append(appointment_to_legacy_dict(visit_to_dict(row, patient)))
     return results
+
+
+def get_next_pending_appointment() -> dict | None:
+    # Use a dedicated DB connection/cursor here to avoid recursive use of the global cursor
+    local_conn = sqlite3.connect(DB_PATH)
+    try:
+        local_cursor = local_conn.cursor()
+        local_cursor.execute(
+            """
+            SELECT v.* FROM visits v
+            WHERE v.is_pending = 1
+            ORDER BY v.visit_date ASC, v.visit_time ASC, v.id ASC
+            LIMIT 1
+            """
+        )
+        row = local_cursor.fetchone()
+
+        while row:
+            if not row[2]:
+                row = local_cursor.fetchone()
+                continue
+            visit_time = normalize_time(row[3]) or "00:00"
+            try:
+                datetime.fromisoformat(f"{row[2]}T{visit_time}")
+            except ValueError:
+                row = local_cursor.fetchone()
+                continue
+            patient_row = local_cursor.execute("SELECT id, name, phone, address, age, occupation, status, complaint FROM patients WHERE id = ?", (row[1],)).fetchone()
+            patient = None
+            if patient_row:
+                patient = {
+                    "id": patient_row[0],
+                    "name": patient_row[1],
+                    "phone": patient_row[2],
+                    "address": patient_row[3],
+                    "age": patient_row[4],
+                    "occupation": patient_row[5],
+                    "status": patient_row[6],
+                    "complaint": patient_row[7],
+                }
+            return appointment_to_legacy_dict(visit_to_dict(row, patient))
+        return None
+    finally:
+        local_conn.close()
+
+
+@app.get("/appointments/next")
+def get_next_appointment():
+    next_appointment = get_next_pending_appointment()
+    return {"appointment": next_appointment}
 
 
 @app.get("/appointments/all")
@@ -917,6 +1058,55 @@ def delete_patient(patient_id: int):
     return {"status": "success", "message": "Patient deleted"}
 
 
+@app.post("/patients/merge")
+def merge_patients(payload: MergePatientsRequest):
+    source_id = payload.source_id
+    target_id = payload.target_id
+    if source_id == target_id:
+        return {"status": "error", "message": "Source and target must be different."}
+
+    source = get_patient(source_id)
+    target = get_patient(target_id)
+    if not source or not target:
+        return {"status": "error", "message": "Source or target patient not found."}
+
+    # Move visits from source to target
+    cursor.execute("UPDATE visits SET patient_id = ? WHERE patient_id = ?", (target_id, source_id))
+
+    # Merge patient-level fields: prefer target values, but fill with source where missing
+    cursor.execute(
+        "SELECT address, age, occupation, status, complaint, balance_adjustment FROM patients WHERE id = ?",
+        (target_id,),
+    )
+    trow = cursor.fetchone()
+    cursor.execute(
+        "SELECT address, age, occupation, status, complaint, balance_adjustment FROM patients WHERE id = ?",
+        (source_id,),
+    )
+    srow = cursor.fetchone()
+
+    def choose(a, b):
+        return a if a not in (None, "") else b
+
+    new_address = choose(trow[0], srow[0])
+    new_age = choose(trow[1], srow[1])
+    new_occupation = choose(trow[2], srow[2])
+    new_status = choose(trow[3], srow[3])
+    new_complaint = choose(trow[4], srow[4])
+    new_adjustment = safe_float(trow[5]) + safe_float(srow[5])
+
+    cursor.execute(
+        "UPDATE patients SET address = ?, age = ?, occupation = ?, status = ?, complaint = ?, balance_adjustment = ? WHERE id = ?",
+        (new_address, new_age, new_occupation, new_status, new_complaint, new_adjustment, target_id),
+    )
+
+    # Delete source patient
+    cursor.execute("DELETE FROM patients WHERE id = ?", (source_id,))
+    conn.commit()
+
+    return {"status": "success", "message": f"Merged patient {source_id} into {target_id}"}
+
+
 @app.get("/import/template")
 def download_import_template():
     content = build_template_workbook()
@@ -932,10 +1122,7 @@ def download_import_template():
 async def preview_import(file: UploadFile = File(...)):
     try:
         content = await file.read()
-        if file.filename.lower().endswith(".csv"):
-            df = pd.read_csv(io.BytesIO(content))
-        else:
-            df = pd.read_excel(io.BytesIO(content))
+        df = load_import_dataframe(content, file.filename or "")
     except Exception as exc:
         return {"status": "error", "message": f"Could not read file: {exc}"}
 
@@ -943,37 +1130,82 @@ async def preview_import(file: UploadFile = File(...)):
         return {"status": "error", "message": "The uploaded file has no rows"}
 
     parsed_rows = parse_import_rows(df)
-    seen_keys: set[str] = set()
-    preview = [validate_import_row(row, seen_keys) for row in parsed_rows]
-    error_count = sum(1 for row in preview if row["status"] == "error")
-    warning_count = sum(1 for row in preview if row["status"] == "warning")
-    valid_count = sum(1 for row in preview if row["status"] == "ok")
+    # group rows for preview
+    groups = group_import_rows(parsed_rows)
+
+    preview_groups = []
+    total = 0
+    errors = 0
+    warnings = 0
+    valids = 0
+    for grp in groups:
+        seen_keys: set[str] = set()
+        grp_preview = [validate_import_row(row, seen_keys) for row in grp["rows"]]
+        grp_errors = sum(1 for r in grp_preview if r["status"] == "error")
+        grp_warnings = sum(1 for r in grp_preview if r["status"] == "warning")
+        grp_valid = sum(1 for r in grp_preview if r["status"] == "ok")
+        preview_groups.append({"patient": grp["patient"], "rows": grp_preview, "summary": {"total": len(grp_preview), "valid": grp_valid, "warnings": grp_warnings, "errors": grp_errors}})
+        total += len(grp_preview)
+        errors += grp_errors
+        warnings += grp_warnings
+        valids += grp_valid
 
     return {
         "status": "success",
-        "summary": {
-            "total": len(preview),
-            "valid": valid_count,
-            "warnings": warning_count,
-            "errors": error_count,
-        },
-        "rows": preview,
+        "summary": {"total": total, "valid": valids, "warnings": warnings, "errors": errors},
+        "groups": preview_groups,
     }
+
+
+def extract_import_row(item: dict) -> dict:
+    if not isinstance(item, dict):
+        return item
+    if "data" in item and isinstance(item["data"], dict):
+        row = {**item["data"]}
+        if "row_number" in item and "row_number" not in row:
+            row["row_number"] = item["row_number"]
+        return row
+    return item
 
 
 @app.post("/import/confirm")
 def confirm_import(payload: ImportConfirmRequest):
     imported = 0
     skipped = 0
+    seen: set[str] = set()
     for item in payload.rows:
-        row = item.get("data", item)
-        seen: set[str] = set()
+        row = extract_import_row(item)
         validation = validate_import_row(row, seen)
         if validation["status"] == "error":
             skipped += 1
             continue
         import_row(row)
         imported += 1
+    conn.commit()
+    return {
+        "status": "success",
+        "message": f"Imported {imported} records",
+        "imported": imported,
+        "skipped": skipped,
+    }
+
+
+@app.post("/import/confirm-grouped")
+def confirm_import_grouped(payload: dict):
+    groups = payload.get("groups") or []
+    imported = 0
+    skipped = 0
+    for grp in groups:
+        rows = grp.get("rows", [])
+        seen: set[str] = set()
+        for item in rows:
+            row = extract_import_row(item)
+            validation = validate_import_row(row, seen)
+            if validation["status"] == "error":
+                skipped += 1
+                continue
+            import_row(row)
+            imported += 1
     conn.commit()
     return {
         "status": "success",
