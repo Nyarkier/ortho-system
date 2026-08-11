@@ -140,9 +140,4 @@ That script will:
 
 Copy `dist/package/Appointment.exe` to the isolated PC and run it directly.
 
-## Suggested improvements before production
-
-- Add authentication for admin access.
-- Add more form validation and error handling.
-- Add a real installer or packaged distribution.
 
