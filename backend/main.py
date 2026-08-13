@@ -73,6 +73,8 @@ app.add_middleware(
     allow_origins=[
         "http://127.0.0.1:8000",
         "http://localhost:8000",
+        "http://localhost:5174",
+        "http://127.0.0.1:5174",
         "http://localhost:5173",
         "http://127.0.0.1:5173",
         "http://localhost:3000",
@@ -214,14 +216,19 @@ def migrate_legacy_appointments():
         return
 
     rows = cursor.execute("SELECT * FROM appointments").fetchall()
+
+    def safe_get(r: tuple, idx: int):
+        return r[idx] if idx < len(r) else None
+
     for row in rows:
+        # use safe access in case legacy table has fewer columns than expected
         patient_id = find_or_create_patient(
-            name=row[1],
-            phone=row[2],
-            address=row[6],
-            age=row[7],
+            name=(safe_get(row, 1) or ""),
+            phone=(safe_get(row, 2) or ""),
+            address=safe_get(row, 6),
+            age=safe_int(safe_get(row, 7)),
         )
-        is_pending = 0 if row[5] else 1
+        is_pending = 0 if (safe_get(row, 5)) else 1
         cursor.execute(
             """
             INSERT INTO visits (
@@ -231,13 +238,13 @@ def migrate_legacy_appointments():
             """,
             (
                 patient_id,
-                row[3],
-                normalize_time(row[4]),
-                row[10],
-                safe_float(row[9]),
-                safe_float(row[9]),
-                row[8],
-                row[11],
+                safe_get(row, 3),
+                normalize_time(safe_get(row, 4)),
+                safe_get(row, 10),
+                safe_float(safe_get(row, 9)),
+                safe_float(safe_get(row, 9)),
+                safe_get(row, 8),
+                safe_get(row, 11),
                 is_pending,
             ),
         )

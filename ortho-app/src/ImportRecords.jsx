@@ -124,11 +124,11 @@ function ImportRecords() {
           <div className="card import-card">
             <h3>3. Review and import</h3>
             <div className="import-summary">
-              <span>Total rows: {preview.summary.total}</span>
-              <span className="summary-ok">Valid: {preview.summary.valid}</span>
-              <span className="summary-warn">Warnings: {preview.summary.warnings}</span>
-              <span className="summary-error">Errors: {preview.summary.errors}</span>
-            </div>
+                  <span>Total rows: {preview?.summary?.total ?? 0}</span>
+                  <span className="summary-ok">Valid: {preview?.summary?.valid ?? 0}</span>
+                  <span className="summary-warn">Warnings: {preview?.summary?.warnings ?? 0}</span>
+                  <span className="summary-error">Errors: {preview?.summary?.errors ?? 0}</span>
+                </div>
 
             <div className="admin-table-wrap">
               <table className="admin-table">
@@ -146,7 +146,7 @@ function ImportRecords() {
                   </tr>
                 </thead>
                 <tbody>
-                  {preview.rows.map((row) => (
+                  {(preview?.rows || []).map((row) => (
                     <tr key={row.row_number} className={`import-row-${row.status}`}>
                       <td>{row.row_number}</td>
                       <td>

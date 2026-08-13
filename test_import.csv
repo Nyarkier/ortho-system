@@ -1,0 +1,3 @@
+name,phone,address,age,occupation,status,complaint,visit_date,visit_time,visit_no,description,debit,credit_amount,credit_date,payment_method,checked_in_at
+John Doe,09171234567,123 Main St,30,Engineer,Single,Toothache,2026-08-13,09:30,1,Extraction,500,0,2026-08-13,Cash,2026-08-13 09:30:00
+Jane Smith,,456 Side St,25,Teacher,,Cleaning,2026-08-14,10:00,2,Prophylaxis,300,0,2026-08-14,GCash,
