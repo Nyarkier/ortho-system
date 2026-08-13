@@ -21,7 +21,7 @@ ReactDOM.createRoot(document.getElementById("root")).render(
           <Route path="/admin/patients/:id" element={<PatientDetail />} />
           <Route path="/admin/import" element={<ImportRecords />} />
         </Routes>
-      </BrowserRouter>
+        </BrowserRouter>
     </ToastProvider>
   </React.StrictMode>
 );

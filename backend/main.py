@@ -77,6 +77,8 @@ app.add_middleware(
         "http://127.0.0.1:5174",
         "http://localhost:5173",
         "http://127.0.0.1:5173",
+        "http://localhost:5175",
+        "http://127.0.0.1:5175",
         "http://localhost:3000",
         "http://127.0.0.1:3000",
     ],
@@ -1180,18 +1182,51 @@ def confirm_import(payload: ImportConfirmRequest):
     imported = 0
     skipped = 0
     seen: set[str] = set()
-    for item in payload.rows:
-        row = extract_import_row(item)
-        validation = validate_import_row(row, seen)
-        if validation["status"] == "error":
-            skipped += 1
-            continue
-        import_row(row)
-        imported += 1
+
+    # Normalize input rows
+    items = [extract_import_row(item) for item in payload.rows]
+
+    # Validate all rows first (build seen set as we go)
+    validations = [validate_import_row(row, seen) for row in items]
+
+    def delete_matching_visit(row_data: dict):
+        name = str(row_data.get("name") or "").strip()
+        visit_date = str(row_data.get("visit_date") or "").strip()
+        visit_time = normalize_time(row_data.get("visit_time") or "")
+        if not name or not visit_date or not visit_time:
+            return
+        cursor.execute(
+            "SELECT v.id FROM visits v JOIN patients p ON p.id = v.patient_id WHERE v.visit_date = ? AND v.visit_time = ? AND lower(p.name) = lower(?)",
+            (visit_date, visit_time, name),
+        )
+        rows = cursor.fetchall()
+        for r in rows:
+            try:
+                cursor.execute("DELETE FROM visits WHERE id = ?", (r[0],))
+            except Exception:
+                pass
+
+    # 1) Import rows that validated as OK
+    for v in validations:
+        if v["status"] == "ok":
+            import_row(v["data"])
+            imported += 1
+
+    # 2) For warnings/errors, overwrite existing matching visits then import
+    for v in validations:
+        if v["status"] in ("warning", "error"):
+            # delete matching visit(s) so import acts like overwrite
+            try:
+                delete_matching_visit(v["data"])
+                import_row(v["data"])
+                imported += 1
+            except Exception:
+                skipped += 1
+
     conn.commit()
     return {
         "status": "success",
-        "message": f"Imported {imported} records",
+        "message": f"Imported {imported} records, skipped {skipped}",
         "imported": imported,
         "skipped": skipped,
     }

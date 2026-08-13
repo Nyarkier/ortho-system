@@ -29,7 +29,9 @@ function ImportRecords() {
         showToast(data.message, "error");
         return;
       }
-      setPreview(data);
+      // Backend returns grouped preview; flatten into preview.rows for UI
+      const rows = (data.groups || []).flatMap((g) => g.rows || []);
+      setPreview({ ...data, rows });
       showToast("Preview ready. Review rows before importing.", "info");
     } catch (error) {
       console.error(error);
@@ -40,12 +42,41 @@ function ImportRecords() {
   };
 
   const handleImport = async () => {
-    if (!preview?.rows?.length) {
-      showToast("Preview the file before importing", "warning");
-      return;
+    let currentPreview = preview;
+    if (!currentPreview?.rows?.length) {
+      if (!file) {
+        showToast("Choose an Excel or CSV file first", "warning");
+        return;
+      }
+
+      // Auto-run preview if user hasn't previewed yet
+      setLoading(true);
+      try {
+        const formData = new FormData();
+        formData.append("file", file);
+        const res = await fetch(`${API_BASE}/import/preview`, {
+          method: "POST",
+          body: formData,
+        });
+        const data = await res.json();
+        if (data.status === "error") {
+          showToast(data.message, "error");
+          return;
+        }
+        const rows = (data.groups || []).flatMap((g) => g.rows || []);
+        currentPreview = { ...data, rows };
+        setPreview(currentPreview);
+        showToast("Preview ready. Importing all rows...", "info");
+      } catch (error) {
+        console.error(error);
+        showToast("Could not preview import file", "error");
+        return;
+      } finally {
+        setLoading(false);
+      }
     }
 
-    const importable = preview.rows.filter((row) => row.status !== "error");
+    const importable = (currentPreview?.rows || []);
     if (!importable.length) {
       showToast("No valid rows to import", "error");
       return;
@@ -161,7 +192,7 @@ function ImportRecords() {
                       <td>{row.data.debit || "—"}</td>
                       <td>{row.data.credit_amount || "—"}</td>
                       <td>
-                        {row.issues.length
+                        {row.issues?.length
                           ? row.issues.map((issue) => issue.message).join("; ")
                           : "—"}
                       </td>
@@ -175,7 +206,7 @@ function ImportRecords() {
               type="button"
               className={`btn btn-confirm ${importing ? "btn-loading" : ""}`}
               onClick={handleImport}
-              disabled={importing || preview.summary.errors === preview.summary.total}
+              disabled={importing || (preview?.summary?.errors ?? 0) === (preview?.summary?.total ?? 0)}
             >
               {importing ? "Importing..." : "Import Valid Rows"}
             </button>
