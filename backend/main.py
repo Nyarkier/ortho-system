@@ -7,7 +7,7 @@ from pathlib import Path
 import pandas as pd
 import sqlite3
 from apscheduler.schedulers.background import BackgroundScheduler
-from fastapi import FastAPI, File, HTTPException, UploadFile
+from fastapi import FastAPI, File, HTTPException, Query, UploadFile
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse, StreamingResponse
 from fastapi.staticfiles import StaticFiles
@@ -985,8 +985,23 @@ def update_visit(visit_id: int, payload: VisitUpdate):
 
 
 @app.get("/patients")
-def list_patients():
-    rows = cursor.execute("SELECT * FROM patients ORDER BY name ASC").fetchall()
+def list_patients(search: str | None = Query(default=None, description="Optional patient name or phone search")):
+    trimmed_search = search.strip() if search is not None else ""
+
+    if not trimmed_search:
+        rows = cursor.execute("SELECT * FROM patients ORDER BY name ASC").fetchall()
+        return [patient_to_dict(row) for row in rows]
+
+    search_pattern = f"%{trimmed_search}%"
+    rows = cursor.execute(
+        """
+        SELECT *
+        FROM patients
+        WHERE LOWER(name) LIKE LOWER(?) OR phone LIKE ?
+        ORDER BY name ASC
+        """,
+        (search_pattern, search_pattern),
+    ).fetchall()
     return [patient_to_dict(row) for row in rows]
 
 

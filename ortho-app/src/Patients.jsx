@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { Link } from "react-router-dom";
 import { API_BASE } from "./api.js";
 import { useToast } from "./Toast.jsx";
@@ -13,24 +13,52 @@ function Patients() {
   const { showToast } = useToast();
   const [patients, setPatients] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [searchTerm, setSearchTerm] = useState("");
+  const initialLoadRef = useRef(false);
+  const lastRequestRef = useRef("");
 
-  const fetchPatients = async () => {
-    try {
-      setLoading(true);
-      const res = await fetch(`${API_BASE}/patients`);
-      if (!res.ok) throw new Error("Failed to load patients");
-      setPatients(await res.json());
-    } catch (error) {
-      console.error(error);
-      showToast("Error fetching patients", "error");
-    } finally {
-      setLoading(false);
-    }
-  };
+  const fetchPatients = useCallback(
+    async (query = "", options = {}) => {
+      const { force = false } = options;
+      const trimmedQuery = query.trim();
+      const url = trimmedQuery
+        ? `${API_BASE}/patients?search=${encodeURIComponent(trimmedQuery)}`
+        : `${API_BASE}/patients`;
+
+      if (!force && lastRequestRef.current === url) {
+        return;
+      }
+
+      lastRequestRef.current = url;
+
+      try {
+        setLoading(true);
+        const res = await fetch(url);
+        if (!res.ok) throw new Error("Failed to load patients");
+        setPatients(await res.json());
+      } catch (error) {
+        console.error(error);
+        showToast("Error fetching patients", "error");
+      } finally {
+        setLoading(false);
+      }
+    },
+    [showToast]
+  );
 
   useEffect(() => {
-    fetchPatients();
-  }, []);
+    if (!initialLoadRef.current) {
+      initialLoadRef.current = true;
+      fetchPatients("", { force: true });
+      return;
+    }
+
+    const timer = setTimeout(() => {
+      fetchPatients(searchTerm);
+    }, 300);
+
+    return () => clearTimeout(timer);
+  }, [fetchPatients, searchTerm]);
 
   return (
     <div className="admin-page">
@@ -40,8 +68,19 @@ function Patients() {
       />
 
       <div className="admin-content">
+        <div className="admin-search">
+          <input
+            type="search"
+            value={searchTerm}
+            onChange={(event) => setSearchTerm(event.target.value)}
+            placeholder="Search patients by name or phone..."
+            className="admin-search-input"
+            aria-label="Search patients by name or phone"
+          />
+        </div>
+
         <div className="admin-toolbar">
-          <button type="button" onClick={fetchPatients} className="btn btn-refresh">
+          <button type="button" onClick={() => fetchPatients(searchTerm, { force: true })} className="btn btn-refresh">
             Refresh
           </button>
           <span className="admin-count">Total Patients: {patients.length}</span>
@@ -51,7 +90,7 @@ function Patients() {
           <div className="admin-empty">Loading...</div>
         ) : patients.length === 0 ? (
           <div className="admin-empty">
-            No patients yet. Book appointments or import paper records to get started.
+            {searchTerm.trim() ? "No patients found." : "No patients yet. Book appointments or import paper records to get started."}
           </div>
         ) : (
           <div className="admin-table-wrap">
