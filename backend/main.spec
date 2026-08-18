@@ -5,7 +5,7 @@ a = Analysis(
     ['main.py'],
     pathex=[],
     binaries=[],
-    datas=[('D:\\Ortho_App\\ortho-system\\ortho-app\\dist', 'dist')],
+    datas=[('../ortho-app/dist', 'dist')],
     hiddenimports=['pandas', 'pandas._libs', 'pandas.core', 'numpy', 'pydantic', 'openpyxl', 'apscheduler', 'apscheduler.schedulers', 'apscheduler.schedulers.background', 'fastapi', 'uvicorn', 'starlette'],
     hookspath=[],
     hooksconfig={},
