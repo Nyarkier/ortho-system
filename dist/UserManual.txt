@@ -1,0 +1,561 @@
+# Doc Jun Clinic
+
+## User Guide
+
+### Welcome
+
+This guide explains how to use the **Doc Jun Clinic Ortho System**.
+
+---
+
+# 1. Starting the System
+
+1. Find the **Appointment.exe** file on the computer. (Asa home screen po)
+2. Double-click the file.
+3. Wait for the system to open.
+4. The main page will appear.
+
+---
+
+# 2. Main Booking Page
+
+The main page has two important sections:
+
+* **Book Appointment**
+* **Patient Check-In**
+
+Use **Book Appointment** when a patient wants to schedule a future visit.
+
+Use **Patient Check-In** when the patient has arrived for their appointment.
+
+---
+
+# 3. Booking an Appointment
+
+### Step 1: Enter the patient's name
+
+Under **Book Appointment**, enter the patient's complete name.
+
+Example:
+
+**Juan Dela Cruz**
+
+### Step 2: Enter the phone number
+
+Enter the patient's contact number.
+
+Example:
+
+**09123456789**
+
+### Step 3: Select the appointment date
+
+Click the date box and select the date when the patient will visit.
+
+### Step 4: Select the appointment time
+
+Choose the patient's appointment time.
+
+### Step 5: Confirm the appointment
+
+Click:
+
+**Confirm Appointment**
+
+The system will tell you if the appointment was successfully saved.
+
+### If something goes wrong
+
+If the system says that the appointment cannot be made, read the message shown on the screen.
+
+For example, the system may tell you that the selected schedule is already taken.
+
+Simply choose another available date or time.
+
+---
+
+# 4. Checking In a Patient
+
+When a patient arrives at the clinic, use **Patient Check-In**.
+
+### Step 1: Enter the patient's name
+
+Enter the patient's name exactly as it appears in the appointment.
+
+### Step 2:Add the debit and credit
+ 
+### Step 3: Click "Check In"
+
+The system will record that the patient has arrived.
+
+The system also records the time the patient was checked in.
+
+
+
+# 5. Admin Page
+
+The Admin section is where you can manage patient and appointment records.
+
+The Admin page has three main sections:
+
+1. **Appointments**
+2. **Patients**
+3. **Import Records**
+
+There is also a **Back to Booking** button that returns you to the normal booking page.
+
+---
+
+# 6. Appointments
+
+The **Appointments** page shows the clinic's appointment records.
+
+You can see information such as:
+
+* Patient name
+* Phone number
+* Address
+* Age
+* Appointment date
+* Appointment time
+* Procedure
+* Payment
+* Amount charged
+* Amount paid
+* Check-in status
+
+The system also shows the **next upcoming appointments** near the top of the page. You can click an appointment to open that patient's information.
+
+### Understanding the status
+
+**Pending**
+
+The patient has an appointment but has not been checked in yet.
+
+**Checked-In**
+
+The patient has already arrived and has been checked in.
+
+---
+
+# 7. Refreshing the Appointment List
+
+If another appointment was recently added and you cannot see it:
+
+1. Click **Refresh**.
+2. Wait for the list to update.
+
+The total number of records is shown beside the Refresh button.
+
+---
+
+# 8. Viewing a Patient's Information
+
+There are two easy ways to view a patient's information.
+
+### From Appointments
+
+Click the patient's appointment.
+
+### From Patients
+
+Go to:
+
+**Admin → Patients**
+
+Then find the patient and click:
+
+**View Ledger**
+
+---
+
+# 9. Patients
+
+The **Patients** page contains the clinic's patient records.
+
+For each patient, you can see:
+
+* Name
+* Phone number
+* Address
+* Age
+* Occupation
+* Status
+* Current balance
+
+The page also has a search box that allows you to find a patient by **name or phone number**.
+
+---
+
+# 10. Searching for a Patient
+
+If there are many patients, you do not need to manually look through the entire list.
+
+At the top of the Patients page, find:
+
+**Search patients by name or phone...**
+
+Type either:
+
+* The patient's name
+* Part of the patient's name
+* The patient's phone number
+
+The list will automatically show matching patients.
+
+### Example
+
+If you type:
+
+**Juan**
+
+the system will show patients whose names match your search.
+
+If you type:
+
+**0912**
+
+the system can show patients with matching phone numbers.
+
+### If no patient appears
+
+You may see:
+
+**No patients found.**
+
+Try checking the spelling or phone number and search again.
+
+---
+
+# 11. Viewing the Patient Ledger
+
+Click:
+
+**View Ledger**
+
+The Patient Ledger contains the patient's complete record.
+
+It can show:
+
+* Personal information
+* Pending appointments
+* Previous visits
+* Treatment or visit descriptions
+* Amount charged
+* Amount paid
+* Payment method
+* Remaining balance
+
+The ledger is designed to work similarly to the patient's traditional paper card.
+
+---
+
+# 12. Understanding the Balance
+
+The **Current Balance** shows how much the patient still needs to pay.
+
+For example:
+
+**Total Charge:** ₱1,000
+**Amount Paid:** ₱600
+**Remaining Balance:** ₱400
+
+If the patient still has an unpaid amount, it will appear as their outstanding balance.
+
+---
+
+# 13. Recording a Payment
+
+If a patient pays part or all of their remaining balance:
+
+1. Open the patient's **Ledger**.
+2. Find **Reduce outstanding balance**.
+3. Enter the amount the patient paid.
+4. Click **Apply payment**.
+
+Example:
+
+The patient owes:
+
+**₱1,500**
+
+The patient pays:
+
+**₱500**
+
+Enter:
+
+**500**
+
+Then click:
+
+**Apply payment**
+
+The patient's remaining balance will be updated.
+
+> **Important:** Enter the amount that was actually paid. Double-check the amount before clicking Apply payment.
+
+---
+
+# 14. Viewing Previous Visits
+
+The Patient Ledger contains a table showing the patient's previous visits.
+
+The table may include:
+
+* Date
+* Visit number
+* Description
+* Time
+* Amount charged
+* Amount paid
+* Payment date
+* Payment method
+* Balance
+* Amount still due
+
+This allows you to review the patient's history without having to search through their paper records.
+
+---
+
+# 15. Editing a Visit
+
+If a visit contains incorrect information:
+
+1. Open the patient's Ledger.
+2. Find the visit that needs to be corrected.
+3. Click **Edit**.
+4. Correct the information.
+5. Click **Save changes**.
+
+You can edit information such as:
+
+* Date
+* Time
+* Description
+* Total charge
+* Amount paid
+* Payment method
+
+If you change your mind, click:
+
+**Cancel**
+
+The original information will remain unchanged.
+
+---
+
+# 16. Importing Old Paper Records
+
+The **Import Records** section is useful when transferring old patient information from Excel or CSV files into the system.
+
+You can use it to move existing paper records into the computer system.
+
+Go to:
+
+**Admin → Import Records**
+
+---
+
+# 17. Downloading the Import Template
+
+Before importing records, it is recommended to use the provided template.
+
+1. Open **Import Records**.
+2. Click **Download Excel Template**.
+3. Open the downloaded Excel file.
+4. Enter the old patient information into the template.
+
+> **Important:** Follow the format of the template. Do not rename or remove the columns.
+
+---
+
+# 18. Uploading Old Records
+
+After filling out the Excel file:
+
+1. Go to **Import Records**.
+2. Click the file selection box.
+3. Select your completed Excel or CSV file.
+4. Click **Preview Import**.
+
+The system will check the file before adding the information.
+
+---
+
+# 19. Reviewing Imported Records
+
+After previewing the file, the system will show:
+
+* Total rows
+* Valid rows
+* Warnings
+* Errors
+
+Review the information carefully.
+
+If everything looks correct, click:
+
+**Import Valid Rows**
+
+The system will then add the valid records.
+
+> **Important:** Always review the preview before importing a large number of records.
+
+---
+
+# 20. Deleting Records
+
+Some records have a **Delete** button.
+
+Be careful when using it.
+
+Deleting a record can permanently remove it from the system.
+
+### Before deleting:
+
+1. Make sure you selected the correct patient or appointment.
+2. Double-check the name.
+3. Make sure the record really needs to be deleted.
+4. Only confirm the deletion when you are sure.
+
+If the system asks:
+
+**Delete appointment?**
+
+or
+
+**Delete patient?**
+
+choose **Delete** only if you are certain.
+
+---
+
+# 21. A Simple Daily Routine
+
+For normal clinic operations, you can follow this routine:
+
+### Before the clinic starts
+
+1. Open **Appointment.exe**.
+2. Check the **Appointments** page.
+3. Look at the **Next Appointments** section.
+
+### When a patient books
+
+1. Go to the Booking page.
+2. Enter their name.
+3. Enter their phone number.
+4. Select the date.
+5. Select the time.
+6. Click **Confirm Appointment**.
+
+### When a patient arrives
+
+1. Go to **Patient Check-In**.
+2. Enter their name.
+3. Enter their appointment date.
+4. Enter their appointment time.
+5. Click **Check In**.
+
+### When you need patient information
+
+1. Go to **Admin**.
+2. Click **Patients**.
+3. Search the patient's name or phone number.
+4. Click **View Ledger**.
+
+### When a patient makes a payment
+
+1. Open the patient's Ledger.
+2. Check their current balance.
+3. Enter the amount paid.
+4. Click **Apply payment**.
+
+---
+
+# 22. If You Make a Mistake
+
+Don't panic.
+
+First, stop and check what was entered.
+
+### Wrong appointment information
+
+Open the relevant patient or appointment record and correct it if possible.
+
+### Wrong payment amount
+
+Do not enter another payment immediately.
+
+Check the patient's Ledger first and ask the person responsible for the system if you are unsure.
+
+### Wrong patient
+
+Do not delete anything immediately.
+
+Double-check the patient's name and phone number first.
+
+---
+
+# 23. Important Reminders
+
+* Always double-check the patient's name.
+* Always check the appointment date and time.
+* Make sure payment amounts are correct.
+* Review information before saving it.
+* Be careful when using **Delete**.
+* Use the patient's phone number to help identify the correct patient.
+* Use **Refresh** if newly added information is not appearing.
+* Keep the computer and system files safe.
+* Do not change or delete system files.
+
+---
+
+# 24. Quick Reference
+
+| What you want to do       | Where to go                    |
+| ------------------------- | ------------------------------ |
+| Book a new appointment    | Booking Page                   |
+| Check in a patient        | Patient Check-In               |
+| See upcoming appointments | Admin → Appointments           |
+| See all patients          | Admin → Patients               |
+| Find a patient            | Admin → Patients → Search      |
+| See patient's history     | Patients → View Ledger         |
+| Record a payment          | Patient Ledger → Apply Payment |
+| Correct a visit           | Patient Ledger → Edit          |
+| Add old paper records     | Admin → Import Records         |
+| Return to booking         | Back to Booking                |
+
+---
+
+# 25. The Most Important Things to Remember
+
+If you only remember five things, remember these:
+
+**1. Book Appointment**
+Use this when scheduling a future visit.
+
+**2. Check In**
+Use this when the patient arrives.
+
+**3. Patients**
+Use this to find patient information.
+
+**4. View Ledger**
+Use this to see the patient's history and balance.
+
+**5. Be Careful with Delete**
+Deleted records may be permanently removed.
+
+---
+
+## That's It!
+
+The system is designed to make everyday clinic work easier.
+
+You only need to remember:
+
+**Book → Check In → Find Patient → View Ledger → Record Payment**
+
+You do not need to understand how the system works internally. Just use the buttons and forms on the screen, and always double-check important patient and payment information before saving.
