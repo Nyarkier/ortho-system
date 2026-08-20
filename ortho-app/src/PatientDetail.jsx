@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Link, useParams } from "react-router-dom";
 import { API_BASE } from "./api.js";
 import { useToast } from "./Toast.jsx";
@@ -20,6 +20,9 @@ function PatientDetail() {
   const [adjustAmount, setAdjustAmount] = useState("");
   const [isAdjustingBalance, setIsAdjustingBalance] = useState(false);
   const [adjustmentError, setAdjustmentError] = useState("");
+  const [isUploadingPhoto, setIsUploadingPhoto] = useState(false);
+  const [photoVersion, setPhotoVersion] = useState(0);
+  const photoInputRef = useRef(null);
 
   const visitDueAmount = (visit) =>
     Math.max(0, Number(visit.debit || 0) - Number(visit.credit_amount || 0));
@@ -133,6 +136,31 @@ function PatientDetail() {
     }
   };
 
+  const handlePhotoUpload = async (event) => {
+    const file = event.target.files?.[0];
+    event.target.value = "";
+    if (!file) return;
+
+    setIsUploadingPhoto(true);
+    try {
+      const formData = new FormData();
+      formData.append("file", file);
+      const res = await fetch(`${API_BASE}/patients/${id}/photo`, {
+        method: "POST",
+        body: formData,
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.detail || "Unable to upload photo.");
+      setPhotoVersion(Date.now());
+      await fetchPatient();
+      showToast("Patient photo uploaded", "success");
+    } catch (error) {
+      showToast(error.message || "Unable to upload photo.", "error");
+    } finally {
+      setIsUploadingPhoto(false);
+    }
+  };
+
   const handleDelete = async () => {
     const confirmed = await confirm({
       title: "Delete patient?",
@@ -221,6 +249,42 @@ function PatientDetail() {
         </div>
 
         <div className="patient-profile card">
+          <div className="patient-profile-header">
+            <div className="patient-avatar-wrap">
+              {patient.photo_path ? (
+                <img
+                  className="patient-avatar"
+                  src={`${API_BASE}/patients/${id}/photo?v=${photoVersion}`}
+                  alt={`${patient.name} profile`}
+                />
+              ) : (
+                <div className="patient-avatar patient-avatar-placeholder" aria-label="No profile photo">
+                  {patient.name.slice(0, 1).toUpperCase()}
+                </div>
+              )}
+              <div>
+                <h2>{patient.name}</h2>
+                <p>Patient ID #{patient.id}</p>
+              </div>
+            </div>
+            <div>
+              <input
+                ref={photoInputRef}
+                type="file"
+                accept=".jpg,.jpeg,.png,.heic,.heif,.webp,image/jpeg,image/png,image/heic,image/heif,image/webp"
+                onChange={handlePhotoUpload}
+                hidden
+              />
+              <button
+                type="button"
+                className="btn btn-upload-photo"
+                onClick={() => photoInputRef.current?.click()}
+                disabled={isUploadingPhoto}
+              >
+                {isUploadingPhoto ? "Uploading..." : patient.photo_path ? "Replace Photo" : "Upload Photo"}
+              </button>
+            </div>
+          </div>
           <div className="profile-grid">
             <div><span>Phone</span><strong>{patient.phone}</strong></div>
             <div><span>Address</span><strong>{patient.address || "—"}</strong></div>

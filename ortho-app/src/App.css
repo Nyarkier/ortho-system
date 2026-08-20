@@ -681,6 +681,64 @@ body {
   margin-bottom: 20px;
 }
 
+.patient-profile-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 20px;
+  margin-bottom: 24px;
+}
+
+.patient-avatar-wrap {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  min-width: 0;
+}
+
+.patient-avatar {
+  width: 88px;
+  height: 88px;
+  flex: 0 0 88px;
+  border-radius: 50%;
+  object-fit: cover;
+  border: 3px solid #dbeafe;
+}
+
+.patient-avatar-placeholder {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: #e0f2fe;
+  color: #0369a1;
+  font-size: 2rem;
+  font-weight: 700;
+}
+
+.patient-profile-header h2 {
+  margin: 0 0 4px;
+  color: #111827;
+  font-size: 1.35rem;
+}
+
+.patient-profile-header p {
+  margin: 0;
+  color: #6b7280;
+  font-size: 0.9rem;
+}
+
+.btn-upload-photo {
+  width: auto !important;
+  min-width: 130px;
+  padding: 10px 14px;
+  background: #0f766e;
+  color: white;
+}
+
+.btn-upload-photo:hover {
+  background: #115e59;
+}
+
 .profile-grid {
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));
@@ -747,6 +805,11 @@ body {
 @media (max-width: 900px) {
   .profile-grid {
     grid-template-columns: 1fr;
+  }
+
+  .patient-profile-header {
+    align-items: flex-start;
+    flex-direction: column;
   }
 }
 

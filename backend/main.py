@@ -3,6 +3,7 @@ import sys
 import webbrowser
 from datetime import date, datetime
 from pathlib import Path
+from uuid import uuid4
 
 import pandas as pd
 import sqlite3
@@ -11,7 +12,15 @@ from fastapi import FastAPI, File, HTTPException, Query, UploadFile
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse, StreamingResponse
 from fastapi.staticfiles import StaticFiles
+from PIL import Image, ImageOps, UnidentifiedImageError
 from pydantic import BaseModel, Field
+
+try:
+    from pillow_heif import register_heif_opener
+
+    register_heif_opener()
+except ImportError:
+    register_heif_opener = None
 
 BASE_DIR = Path(__file__).resolve().parent
 
@@ -27,6 +36,9 @@ DATA_DIR.mkdir(parents=True, exist_ok=True)
 DB_PATH = DATA_DIR / "appointments.db"
 EXPORT_PATH = DATA_DIR / "appointments.xlsx"
 TEMPLATE_PATH = DATA_DIR / "import-template.xlsx"
+PHOTO_DIR = DATA_DIR / "patient-photos"
+PHOTO_MAX_BYTES = 10 * 1024 * 1024
+PHOTO_MAX_DIMENSION = 1200
 
 IMPORT_COLUMNS = [
     "name",
@@ -155,6 +167,53 @@ def safe_int(value) -> int | None:
         return None
 
 
+def remove_patient_photo(photo_path: str | None) -> None:
+    if not photo_path:
+        return
+    candidate = (PHOTO_DIR / Path(photo_path).name).resolve()
+    photo_root = PHOTO_DIR.resolve()
+    if candidate.parent == photo_root and candidate.is_file():
+        candidate.unlink()
+
+
+def process_patient_photo(content: bytes, filename: str | None) -> tuple[bytes, str, str]:
+    extension = Path(filename or "").suffix.lower()
+    allowed_extensions = {".jpg", ".jpeg", ".png", ".heic", ".heif", ".webp"}
+    if extension not in allowed_extensions:
+        raise HTTPException(status_code=400, detail="Unsupported photo format. Use JPG, JPEG, PNG, HEIC, HEIF, or WEBP.")
+    if len(content) > PHOTO_MAX_BYTES:
+        raise HTTPException(status_code=413, detail="Photo is too large. Maximum size is 10 MB.")
+
+    try:
+        with Image.open(io.BytesIO(content)) as source:
+            detected_format = (source.format or "").upper()
+            if detected_format not in {"JPEG", "PNG", "HEIF", "HEIC", "WEBP"}:
+                raise HTTPException(status_code=400, detail="The uploaded file is not a supported image.")
+            source.verify()
+
+        with Image.open(io.BytesIO(content)) as source:
+            image = ImageOps.exif_transpose(source)
+            image.thumbnail((PHOTO_MAX_DIMENSION, PHOTO_MAX_DIMENSION), Image.Resampling.LANCZOS)
+            output = io.BytesIO()
+            if detected_format == "PNG":
+                if image.mode not in {"RGB", "RGBA", "L", "LA", "P"}:
+                    image = image.convert("RGBA")
+                image.save(output, format="PNG", optimize=True)
+                return output.getvalue(), "png", "image/png"
+            if detected_format == "WEBP":
+                if image.mode not in {"RGB", "RGBA"}:
+                    image = image.convert("RGBA" if "A" in image.getbands() else "RGB")
+                image.save(output, format="WEBP", quality=88, method=6)
+                return output.getvalue(), "webp", "image/webp"
+            image = image.convert("RGB")
+            image.save(output, format="JPEG", quality=88, optimize=True)
+            return output.getvalue(), "jpg", "image/jpeg"
+    except UnidentifiedImageError as exc:
+        raise HTTPException(status_code=400, detail="The uploaded file is not a valid image.") from exc
+    except OSError as exc:
+        raise HTTPException(status_code=400, detail="The uploaded image is corrupted or cannot be read.") from exc
+
+
 def init_db():
     cursor.execute(
         """
@@ -168,7 +227,8 @@ def init_db():
             status TEXT,
             complaint TEXT,
             created_at TEXT NOT NULL,
-            balance_adjustment REAL DEFAULT 0
+            balance_adjustment REAL DEFAULT 0,
+            photo_path TEXT
         )
         """
     )
@@ -196,12 +256,23 @@ def init_db():
     )
     conn.commit()
     ensure_patient_balance_adjustment_column()
+    ensure_patient_photo_column()
+    PHOTO_DIR.mkdir(parents=True, exist_ok=True)
     migrate_legacy_appointments()
 
 
 def ensure_patient_balance_adjustment_column():
     try:
         cursor.execute("ALTER TABLE patients ADD COLUMN balance_adjustment REAL DEFAULT 0")
+        conn.commit()
+    except sqlite3.OperationalError as exc:
+        if "duplicate column name" not in str(exc).lower():
+            raise
+
+
+def ensure_patient_photo_column():
+    try:
+        cursor.execute("ALTER TABLE patients ADD COLUMN photo_path TEXT")
         conn.commit()
     except sqlite3.OperationalError as exc:
         if "duplicate column name" not in str(exc).lower():
@@ -324,6 +395,7 @@ def patient_to_dict(row: tuple) -> dict:
         "complaint": row[7],
         "created_at": row[8],
         "balance_adjustment": row[9] if len(row) > 9 else 0,
+        "photo_path": row[10] if len(row) > 10 else None,
         "balance": balance,
     }
 
@@ -987,18 +1059,34 @@ def update_visit(visit_id: int, payload: VisitUpdate):
 @app.get("/patients")
 def list_patients(search: str | None = Query(default=None, description="Optional patient name or phone search")):
     trimmed_search = search.strip() if search is not None else ""
+    order_clause = """
+        ORDER BY
+            CASE WHEN first_checked_in_at IS NULL THEN 1 ELSE 0 END,
+            first_checked_in_at ASC,
+            patient_id ASC
+    """
 
     if not trimmed_search:
-        rows = cursor.execute("SELECT * FROM patients ORDER BY name ASC").fetchall()
+        rows = cursor.execute(
+            f"""
+            SELECT p.*, MIN(CASE WHEN v.is_pending = 0 THEN v.checked_in_at END) AS first_checked_in_at
+            FROM patients p
+            LEFT JOIN visits v ON v.patient_id = p.id
+            GROUP BY p.id
+            {order_clause}
+            """
+        ).fetchall()
         return [patient_to_dict(row) for row in rows]
 
     search_pattern = f"%{trimmed_search}%"
     rows = cursor.execute(
-        """
-        SELECT *
-        FROM patients
-        WHERE LOWER(name) LIKE LOWER(?) OR phone LIKE ?
-        ORDER BY name ASC
+        f"""
+        SELECT p.*, MIN(CASE WHEN v.is_pending = 0 THEN v.checked_in_at END) AS first_checked_in_at
+        FROM patients p
+        LEFT JOIN visits v ON v.patient_id = p.id
+        WHERE LOWER(p.name) LIKE LOWER(?) OR p.phone LIKE ?
+        GROUP BY p.id
+        {order_clause}
         """,
         (search_pattern, search_pattern),
     ).fetchall()
@@ -1019,6 +1107,39 @@ def get_patient_detail(patient_id: int):
         "visits": get_visit_history(patient_id),
         "pending_appointments": [visit_to_dict(row) for row in pending],
     }
+
+
+@app.get("/patients/{patient_id}/photo")
+def get_patient_photo(patient_id: int):
+    patient = get_patient(patient_id)
+    if not patient or not patient.get("photo_path"):
+        raise HTTPException(status_code=404, detail="Patient photo not found")
+    photo_path = (PHOTO_DIR / Path(patient["photo_path"]).name).resolve()
+    if photo_path.parent != PHOTO_DIR.resolve() or not photo_path.is_file():
+        raise HTTPException(status_code=404, detail="Patient photo not found")
+    return FileResponse(photo_path)
+
+
+@app.post("/patients/{patient_id}/photo")
+async def upload_patient_photo(patient_id: int, file: UploadFile = File(...)):
+    patient = get_patient(patient_id)
+    if not patient:
+        raise HTTPException(status_code=404, detail="Patient not found")
+
+    content = await file.read(PHOTO_MAX_BYTES + 1)
+    processed, extension, media_type = process_patient_photo(content, file.filename)
+    new_filename = f"patient-{patient_id}-{uuid4().hex}.{extension}"
+    new_path = PHOTO_DIR / new_filename
+    try:
+        new_path.write_bytes(processed)
+        cursor.execute("UPDATE patients SET photo_path = ? WHERE id = ?", (new_filename, patient_id))
+        conn.commit()
+    except Exception:
+        new_path.unlink(missing_ok=True)
+        raise HTTPException(status_code=500, detail="Unable to save the patient photo.")
+
+    remove_patient_photo(patient.get("photo_path"))
+    return {"status": "success", "photo_path": new_filename, "media_type": media_type}
 
 
 @app.put("/patients/{patient_id}")
@@ -1074,11 +1195,13 @@ def adjust_patient_balance(patient_id: int, payload: BalanceAdjustmentRequest):
 
 @app.delete("/patients/{patient_id}")
 def delete_patient(patient_id: int):
-    if not get_patient(patient_id):
+    patient = get_patient(patient_id)
+    if not patient:
         raise HTTPException(status_code=404, detail="Patient not found")
     cursor.execute("DELETE FROM visits WHERE patient_id = ?", (patient_id,))
     cursor.execute("DELETE FROM patients WHERE id = ?", (patient_id,))
     conn.commit()
+    remove_patient_photo(patient.get("photo_path"))
     return {"status": "success", "message": "Patient deleted"}
 
 
