@@ -898,20 +898,26 @@ class VisitUpdate(BaseModel):
 
 @app.get("/queue/current")
 def get_current_queue_number():
-    row = cursor.execute(
-        "SELECT current_number FROM queue_state WHERE id = 1"
-    ).fetchone()
+    local_conn = sqlite3.connect(DB_PATH)
+    try:
+        row = local_conn.execute(
+            "SELECT current_number FROM queue_state WHERE id = 1"
+        ).fetchone()
+    finally:
+        local_conn.close()
     return {"current_number": row[0] if row else None}
 
 
 @app.post("/queue/call")
 def call_queue_number(payload: QueueCallRequest):
     updated_at = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-    cursor.execute(
+    local_conn = sqlite3.connect(DB_PATH)
+    local_conn.execute(
         "UPDATE queue_state SET current_number = ?, updated_at = ? WHERE id = 1",
         (payload.number, updated_at),
     )
-    conn.commit()
+    local_conn.commit()
+    local_conn.close()
     return {"current_number": payload.number}
 
 
