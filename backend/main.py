@@ -288,7 +288,10 @@ def init_db():
         """
     )
     cursor.execute(
-        "INSERT OR IGNORE INTO queue_state (id, current_number, updated_at) VALUES (1, NULL, NULL)"
+        "INSERT OR IGNORE INTO queue_state (id, current_number, updated_at) VALUES (1, 1, NULL)"
+    )
+    cursor.execute(
+        "UPDATE queue_state SET current_number = 1 WHERE id = 1 AND current_number IS NULL"
     )
     cursor.execute(
         """
