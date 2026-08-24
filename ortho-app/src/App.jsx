@@ -33,6 +33,7 @@ const emptyVisit = {
   paymentMethod: "",
   amountPaid: "",
   procedure: "",
+  nextProcedure: "",
 };
 
 function App() {
@@ -79,6 +80,8 @@ function App() {
     setVisit((prev) => ({
       ...prev,
       appointmentId: String(appt.id),
+      procedure: appt.procedure || "",
+      nextProcedure: "",
     }));
   };
 
@@ -137,6 +140,7 @@ function App() {
 
   const handleSubmit = async () => {
     const { name, address, phone, age, occupation, status, complaint, date, time } = patient;
+    const { procedure } = visit;
 
     if (!name || !address || !phone || !age || !date || !time) {
       showToast("Please fill all booking fields", "warning");
@@ -161,6 +165,7 @@ function App() {
           occupation: occupation || null,
           status: status || null,
           complaint: complaint || null,
+          procedure: procedure || null,
           date,
           time,
         }),
@@ -186,7 +191,7 @@ function App() {
 
   const handleCheckIn = async () => {
     const { name, address, phone, age, occupation, status, complaint, date, time } = patient;
-    const { appointmentId, paymentMethod, amountPaid, procedure } = visit;
+    const { appointmentId, paymentMethod, amountPaid, procedure, nextProcedure } = visit;
 
     if (!appointmentId) {
       showToast("Select the patient's booked appointment first", "warning");
@@ -237,6 +242,7 @@ function App() {
           occupation: occupation || null,
           status: status || null,
           complaint: complaint || null,
+          next_procedure: nextProcedure || null,
           debit: Number(visit.debit),
           payment_method: paymentMethod,
           amount_paid: Number(amountPaid),
@@ -281,6 +287,10 @@ function App() {
     }
   };
 
+  const openQueueDisplay = () => {
+    window.open("/queue-display", "_blank", "noopener,noreferrer");
+  };
+
   return (
     <div className="app">
       <div className="brand-bar">
@@ -289,6 +299,9 @@ function App() {
           <Link to="/admin" className="btn btn-admin">
             Admin
           </Link>
+          <button type="button" className="btn btn-queue-display" onClick={openQueueDisplay}>
+            Queue Display
+          </button>
           <button
             type="button"
             className={`btn btn-extract ${isExporting ? "btn-loading" : ""}`}
@@ -372,7 +385,17 @@ function App() {
                 value={patient.complaint}
                 onChange={(e) => updatePatient("complaint", e.target.value)}
               />
-              <label>Purpose</label>
+              <label>Complaint</label>
+            </div>
+
+            <div className="input-group">
+              <input
+                type="text"
+                placeholder=" "
+                value={visit.procedure}
+                onChange={(e) => updateVisit("procedure", e.target.value)}
+              />
+              <label>Current Procedure</label>
             </div>
 
             <div className="input-row">
@@ -489,8 +512,12 @@ function App() {
                 <span className="summary-value">{patient.status || "—"}</span>
               </div>
               <div className="summary-item">
-                <span className="summary-label">Purpose</span>
+                <span className="summary-label">Complaint</span>
                 <span className="summary-value">{patient.complaint || "—"}</span>
+              </div>
+              <div className="summary-item">
+                <span className="summary-label">Current Procedure</span>
+                <span className="summary-value">{visit.procedure || "—"}</span>
               </div>
               <div className="summary-row">
                 <div className="summary-item">
@@ -548,9 +575,7 @@ function App() {
                   onChange={(e) => updateVisit("paymentMethod", e.target.value)}
                   required
                 >
-                  <option value="" disabled>
-                    Select payment method
-                  </option>
+                  <option value="" disabled hidden />
                   {PAYMENT_METHODS.map((method) => (
                     <option key={method} value={method}>
                       {method}
@@ -578,6 +603,16 @@ function App() {
                 required
               />
               <label>Procedure</label>
+            </div>
+
+            <div className="input-group">
+              <input
+                type="text"
+                placeholder=" "
+                value={visit.nextProcedure}
+                onChange={(e) => updateVisit("nextProcedure", e.target.value)}
+              />
+              <label>Next Procedure</label>
             </div>
 
             <button

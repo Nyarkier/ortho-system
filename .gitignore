@@ -11,6 +11,7 @@ __pycache__/
 backend/appointments.db
 dist/appointments.db
 dist/appointments.xlsx
+dist/patient-photos/
 
 # Node
 node_modules/

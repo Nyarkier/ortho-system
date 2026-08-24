@@ -18,7 +18,10 @@
   <a target="code" href="///C:/Users/kier/ortho-system/backend/main.py" type="text/plain"><tt>main.py</tt></a>
 <span class="moduletype">Script</span>  <div class="import">
 imports:
-    <a href="#_collections_abc">_collections_abc</a>
+    <a href="#PIL">PIL</a>
+ &#8226;   <a href="#PIL.Image">PIL.Image</a>
+ &#8226;   <a href="#PIL.ImageOps">PIL.ImageOps</a>
+ &#8226;   <a href="#_collections_abc">_collections_abc</a>
  &#8226;   <a href="#_weakrefset">_weakrefset</a>
  &#8226;   <a href="#abc">abc</a>
  &#8226;   <a href="#apscheduler">apscheduler</a>
@@ -172,6 +175,9 @@ imports:
  &#8226;   <a href="#pandas._libs">pandas._libs</a>
  &#8226;   <a href="#pandas.core">pandas.core</a>
  &#8226;   <a href="#pathlib">pathlib</a>
+ &#8226;   <a href="#pillow_heif">pillow_heif</a>
+ &#8226;   <a href="#pillow_heif.HeifImagePlugin">pillow_heif.HeifImagePlugin</a>
+ &#8226;   <a href="#pillow_heif.heif">pillow_heif.heif</a>
  &#8226;   <a href="#posixpath">posixpath</a>
  &#8226;   <a href="#pydantic">pydantic</a>
  &#8226;   <a href="#pydantic.BaseModel">pydantic.BaseModel</a>
@@ -196,6 +202,7 @@ imports:
  &#8226;   <a href="#sys">sys</a>
  &#8226;   <a href="#traceback">traceback</a>
  &#8226;   <a href="#types">types</a>
+ &#8226;   <a href="#uuid">uuid</a>
  &#8226;   <a href="#uvicorn">uvicorn</a>
  &#8226;   <a href="#warnings">warnings</a>
  &#8226;   <a href="#weakref">weakref</a>
@@ -619,7 +626,6 @@ imported by:
  &#8226;   <a href="#pydantic_core.core_schema">pydantic_core.core_schema</a>
  &#8226;   <a href="#pyparsing.core">pyparsing.core</a>
  &#8226;   <a href="#pyparsing.results">pyparsing.results</a>
- &#8226;   <a href="#python_multipart.multipart">python_multipart.multipart</a>
  &#8226;   <a href="#selectors">selectors</a>
  &#8226;   <a href="#setuptools">setuptools</a>
  &#8226;   <a href="#setuptools._distutils._modified">setuptools._distutils._modified</a>
@@ -1642,9 +1648,13 @@ imported by:
  &#8226;   <a href="#PIL._version">PIL._version</a>
  &#8226;   <a href="#PIL._webp">PIL._webp</a>
  &#8226;   <a href="#PIL.features">PIL.features</a>
+ &#8226;   <a href="#main.py">main.py</a>
  &#8226;   <a href="#matplotlib.backends._backend_tk">matplotlib.backends._backend_tk</a>
  &#8226;   <a href="#matplotlib.colors">matplotlib.colors</a>
  &#8226;   <a href="#openpyxl.drawing.image">openpyxl.drawing.image</a>
+ &#8226;   <a href="#pillow_heif.as_plugin">pillow_heif.as_plugin</a>
+ &#8226;   <a href="#pillow_heif.heif">pillow_heif.heif</a>
+ &#8226;   <a href="#pillow_heif.misc">pillow_heif.misc</a>
 
   </div>
 
@@ -2325,11 +2335,15 @@ imported by:
  &#8226;   <a href="#PIL.XbmImagePlugin">PIL.XbmImagePlugin</a>
  &#8226;   <a href="#PIL.XpmImagePlugin">PIL.XpmImagePlugin</a>
  &#8226;   <a href="#PIL.features">PIL.features</a>
+ &#8226;   <a href="#main.py">main.py</a>
  &#8226;   <a href="#matplotlib.backends._backend_tk">matplotlib.backends._backend_tk</a>
  &#8226;   <a href="#matplotlib.colors">matplotlib.colors</a>
  &#8226;   <a href="#matplotlib.image">matplotlib.image</a>
  &#8226;   <a href="#matplotlib.pyplot">matplotlib.pyplot</a>
  &#8226;   <a href="#openpyxl.drawing.image">openpyxl.drawing.image</a>
+ &#8226;   <a href="#pillow_heif.as_plugin">pillow_heif.as_plugin</a>
+ &#8226;   <a href="#pillow_heif.heif">pillow_heif.heif</a>
+ &#8226;   <a href="#pillow_heif.misc">pillow_heif.misc</a>
 
   </div>
 
@@ -2480,6 +2494,7 @@ imported by:
  &#8226;   <a href="#PIL.XVThumbImagePlugin">PIL.XVThumbImagePlugin</a>
  &#8226;   <a href="#PIL.XbmImagePlugin">PIL.XbmImagePlugin</a>
  &#8226;   <a href="#PIL.XpmImagePlugin">PIL.XpmImagePlugin</a>
+ &#8226;   <a href="#pillow_heif.as_plugin">pillow_heif.as_plugin</a>
 
   </div>
 
@@ -2579,6 +2594,7 @@ imported by:
     <a href="#PIL">PIL</a>
  &#8226;   <a href="#PIL.GifImagePlugin">PIL.GifImagePlugin</a>
  &#8226;   <a href="#PIL.TiffImagePlugin">PIL.TiffImagePlugin</a>
+ &#8226;   <a href="#main.py">main.py</a>
 
   </div>
 
@@ -2669,6 +2685,7 @@ imported by:
  &#8226;   <a href="#PIL.MpoImagePlugin">PIL.MpoImagePlugin</a>
  &#8226;   <a href="#PIL.PdfImagePlugin">PIL.PdfImagePlugin</a>
  &#8226;   <a href="#PIL.PngImagePlugin">PIL.PngImagePlugin</a>
+ &#8226;   <a href="#pillow_heif.as_plugin">pillow_heif.as_plugin</a>
 
   </div>
 
@@ -4247,6 +4264,9 @@ imported by:
  &#8226;   <a href="#pandas.util._tester">pandas.util._tester</a>
  &#8226;   <a href="#pandas.util._validators">pandas.util._validators</a>
  &#8226;   <a href="#pandas.util.version">pandas.util.version</a>
+ &#8226;   <a href="#pillow_heif.as_plugin">pillow_heif.as_plugin</a>
+ &#8226;   <a href="#pillow_heif.heif">pillow_heif.heif</a>
+ &#8226;   <a href="#pillow_heif.misc">pillow_heif.misc</a>
  &#8226;   <a href="#pydantic._internal._config">pydantic._internal._config</a>
  &#8226;   <a href="#pydantic._internal._core_metadata">pydantic._internal._core_metadata</a>
  &#8226;   <a href="#pydantic._internal._core_utils">pydantic._internal._core_utils</a>
@@ -5141,6 +5161,19 @@ imports:
   <div class="import">
 imported by:
     <a href="#pickle">pickle</a>
+
+  </div>
+
+</div>
+
+<div class="node">
+  <a name="_pillow_heif"></a>
+  <tt>_pillow_heif</tt> <span class="moduletype"><tt>C:\Users\kier\ortho-system\.venv\Lib\site-packages\_pillow_heif.cp314-win_amd64.pyd</tt></span>  <div class="import">
+imported by:
+    <a href="#pillow_heif._lib_info">pillow_heif._lib_info</a>
+ &#8226;   <a href="#pillow_heif.as_plugin">pillow_heif.as_plugin</a>
+ &#8226;   <a href="#pillow_heif.heif">pillow_heif.heif</a>
+ &#8226;   <a href="#pillow_heif.misc">pillow_heif.misc</a>
 
   </div>
 
@@ -10005,6 +10038,7 @@ imported by:
  &#8226;   <a href="#pandas._typing">pandas._typing</a>
  &#8226;   <a href="#pandas.core.common">pandas.core.common</a>
  &#8226;   <a href="#pdb">pdb</a>
+ &#8226;   <a href="#pillow_heif.misc">pillow_heif.misc</a>
  &#8226;   <a href="#pydoc">pydoc</a>
  &#8226;   <a href="#reprlib">reprlib</a>
  &#8226;   <a href="#rlcompleter">rlcompleter</a>
@@ -12200,6 +12234,7 @@ imported by:
  &#8226;   <a href="#pandas.io.json._normalize">pandas.io.json._normalize</a>
  &#8226;   <a href="#pandas.io.parsers.base_parser">pandas.io.parsers.base_parser</a>
  &#8226;   <a href="#pandas.io.pytables">pandas.io.pytables</a>
+ &#8226;   <a href="#pillow_heif.heif">pillow_heif.heif</a>
  &#8226;   <a href="#pydantic._internal._dataclasses">pydantic._internal._dataclasses</a>
  &#8226;   <a href="#pydantic._internal._decorators">pydantic._internal._decorators</a>
  &#8226;   <a href="#pydantic._internal._generate_schema">pydantic._internal._generate_schema</a>
@@ -12476,6 +12511,7 @@ imported by:
  &#8226;   <a href="#pandas.core.groupby.generic">pandas.core.groupby.generic</a>
  &#8226;   <a href="#pandas.core.internals.construction">pandas.core.internals.construction</a>
  &#8226;   <a href="#pandas.io.common">pandas.io.common</a>
+ &#8226;   <a href="#pillow_heif.misc">pillow_heif.misc</a>
  &#8226;   <a href="#pprint">pprint</a>
  &#8226;   <a href="#pydantic._internal._dataclasses">pydantic._internal._dataclasses</a>
  &#8226;   <a href="#pydantic._internal._decorators">pydantic._internal._decorators</a>
@@ -13613,6 +13649,7 @@ imported by:
  &#8226;   <a href="#importlib.metadata._adapters">importlib.metadata._adapters</a>
  &#8226;   <a href="#logging.handlers">logging.handlers</a>
  &#8226;   <a href="#pydoc">pydoc</a>
+ &#8226;   <a href="#python_multipart.multipart">python_multipart.multipart</a>
  &#8226;   <a href="#setuptools._core_metadata">setuptools._core_metadata</a>
  &#8226;   <a href="#setuptools.command.bdist_wheel">setuptools.command.bdist_wheel</a>
  &#8226;   <a href="#setuptools.config._validate_pyproject.formats">setuptools.config._validate_pyproject.formats</a>
@@ -16324,6 +16361,8 @@ imported by:
  &#8226;   <a href="#pandas.core.computation.parsing">pandas.core.computation.parsing</a>
  &#8226;   <a href="#pandas.core.interchange.dataframe_protocol">pandas.core.interchange.dataframe_protocol</a>
  &#8226;   <a href="#pandas.io.parsers.base_parser">pandas.io.parsers.base_parser</a>
+ &#8226;   <a href="#pillow_heif.constants">pillow_heif.constants</a>
+ &#8226;   <a href="#pillow_heif.misc">pillow_heif.misc</a>
  &#8226;   <a href="#plistlib">plistlib</a>
  &#8226;   <a href="#py_compile">py_compile</a>
  &#8226;   <a href="#pydantic._internal._generate_schema">pydantic._internal._generate_schema</a>
@@ -19763,6 +19802,7 @@ imported by:
  &#8226;   <a href="#pdb">pdb</a>
  &#8226;   <a href="#pickle">pickle</a>
  &#8226;   <a href="#pickletools">pickletools</a>
+ &#8226;   <a href="#pillow_heif.heif">pillow_heif.heif</a>
  &#8226;   <a href="#plistlib">plistlib</a>
  &#8226;   <a href="#pprint">pprint</a>
  &#8226;   <a href="#pydoc">pydoc</a>
@@ -19934,6 +19974,7 @@ imported by:
  &#8226;   <a href="#pathlib">pathlib</a>
  &#8226;   <a href="#pdb">pdb</a>
  &#8226;   <a href="#pickle">pickle</a>
+ &#8226;   <a href="#pillow_heif.as_plugin">pillow_heif.as_plugin</a>
  &#8226;   <a href="#platform">platform</a>
  &#8226;   <a href="#plistlib">plistlib</a>
  &#8226;   <a href="#pydantic._internal._decorators">pydantic._internal._decorators</a>
@@ -20605,6 +20646,7 @@ imported by:
  &#8226;   <a href="#pandas.io.excel._xlrd">pandas.io.excel._xlrd</a>
  &#8226;   <a href="#pandas.io.formats.format">pandas.io.formats.format</a>
  &#8226;   <a href="#pandas.plotting._matplotlib.tools">pandas.plotting._matplotlib.tools</a>
+ &#8226;   <a href="#pillow_heif.misc">pillow_heif.misc</a>
  &#8226;   <a href="#pydantic._internal._validators">pydantic._internal._validators</a>
  &#8226;   <a href="#pydantic.color">pydantic.color</a>
  &#8226;   <a href="#pydantic.json_schema">pydantic.json_schema</a>
@@ -37273,6 +37315,7 @@ imported by:
  &#8226;   <a href="#pathlib">pathlib</a>
  &#8226;   <a href="#pathlib._os">pathlib._os</a>
  &#8226;   <a href="#pdb">pdb</a>
+ &#8226;   <a href="#pillow_heif">pillow_heif</a>
  &#8226;   <a href="#pkgutil">pkgutil</a>
  &#8226;   <a href="#platform">platform</a>
  &#8226;   <a href="#plistlib">plistlib</a>
@@ -50639,6 +50682,7 @@ imported by:
  &#8226;   <a href="#pandas.io.formats.style_render">pandas.io.formats.style_render</a>
  &#8226;   <a href="#pandas.io.spss">pandas.io.spss</a>
  &#8226;   <a href="#pathlib._os">pathlib._os</a>
+ &#8226;   <a href="#pillow_heif.misc">pillow_heif.misc</a>
  &#8226;   <a href="#pydantic._internal._generate_schema">pydantic._internal._generate_schema</a>
  &#8226;   <a href="#pydantic._internal._git">pydantic._internal._git</a>
  &#8226;   <a href="#pydantic.deprecated.json">pydantic.deprecated.json</a>
@@ -50824,6 +50868,241 @@ imports:
   <div class="import">
 imported by:
     <a href="#pandas.core.arrays.arrow.extension_types">pandas.core.arrays.arrow.extension_types</a>
+
+  </div>
+
+</div>
+
+<div class="node">
+  <a name="pillow_heif"></a>
+  <a target="code" href="///C:/Users/kier/ortho-system/.venv/Lib/site-packages/pillow_heif/__init__.py" type="text/plain"><tt>pillow_heif</tt></a>
+<span class="moduletype">Package</span>  <div class="import">
+imports:
+    <a href="#os">os</a>
+ &#8226;   <a href="#pillow_heif">pillow_heif</a>
+ &#8226;   <a href="#pillow_heif._lib_info">pillow_heif._lib_info</a>
+ &#8226;   <a href="#pillow_heif._version">pillow_heif._version</a>
+ &#8226;   <a href="#pillow_heif.as_plugin">pillow_heif.as_plugin</a>
+ &#8226;   <a href="#pillow_heif.constants">pillow_heif.constants</a>
+ &#8226;   <a href="#pillow_heif.heif">pillow_heif.heif</a>
+ &#8226;   <a href="#pillow_heif.misc">pillow_heif.misc</a>
+ &#8226;   <a href="#pillow_heif.options">pillow_heif.options</a>
+
+  </div>
+  <div class="import">
+imported by:
+    <a href="#main.py">main.py</a>
+ &#8226;   <a href="#pillow_heif">pillow_heif</a>
+ &#8226;   <a href="#pillow_heif.HeifImagePlugin">pillow_heif.HeifImagePlugin</a>
+ &#8226;   <a href="#pillow_heif._deffered_error">pillow_heif._deffered_error</a>
+ &#8226;   <a href="#pillow_heif._lib_info">pillow_heif._lib_info</a>
+ &#8226;   <a href="#pillow_heif._version">pillow_heif._version</a>
+ &#8226;   <a href="#pillow_heif.as_plugin">pillow_heif.as_plugin</a>
+ &#8226;   <a href="#pillow_heif.constants">pillow_heif.constants</a>
+ &#8226;   <a href="#pillow_heif.heif">pillow_heif.heif</a>
+ &#8226;   <a href="#pillow_heif.misc">pillow_heif.misc</a>
+ &#8226;   <a href="#pillow_heif.options">pillow_heif.options</a>
+
+  </div>
+
+</div>
+
+<div class="node">
+  <a name="pillow_heif.HeifImagePlugin"></a>
+  <a target="code" href="///C:/Users/kier/ortho-system/.venv/Lib/site-packages/pillow_heif/HeifImagePlugin.py" type="text/plain"><tt>pillow_heif.HeifImagePlugin</tt></a>
+<span class="moduletype">SourceModule</span>  <div class="import">
+imports:
+    <a href="#pillow_heif">pillow_heif</a>
+ &#8226;   <a href="#pillow_heif.as_plugin">pillow_heif.as_plugin</a>
+
+  </div>
+  <div class="import">
+imported by:
+    <a href="#main.py">main.py</a>
+
+  </div>
+
+</div>
+
+<div class="node">
+  <a name="pillow_heif._deffered_error"></a>
+  <a target="code" href="///C:/Users/kier/ortho-system/.venv/Lib/site-packages/pillow_heif/_deffered_error.py" type="text/plain"><tt>pillow_heif._deffered_error</tt></a>
+<span class="moduletype">SourceModule</span>  <div class="import">
+imports:
+    <a href="#pillow_heif">pillow_heif</a>
+
+  </div>
+  <div class="import">
+imported by:
+    <a href="#pillow_heif._lib_info">pillow_heif._lib_info</a>
+ &#8226;   <a href="#pillow_heif.as_plugin">pillow_heif.as_plugin</a>
+ &#8226;   <a href="#pillow_heif.heif">pillow_heif.heif</a>
+ &#8226;   <a href="#pillow_heif.misc">pillow_heif.misc</a>
+
+  </div>
+
+</div>
+
+<div class="node">
+  <a name="pillow_heif._lib_info"></a>
+  <a target="code" href="///C:/Users/kier/ortho-system/.venv/Lib/site-packages/pillow_heif/_lib_info.py" type="text/plain"><tt>pillow_heif._lib_info</tt></a>
+<span class="moduletype">SourceModule</span>  <div class="import">
+imports:
+    <a href="#_pillow_heif">_pillow_heif</a>
+ &#8226;   <a href="#pillow_heif">pillow_heif</a>
+ &#8226;   <a href="#pillow_heif._deffered_error">pillow_heif._deffered_error</a>
+
+  </div>
+  <div class="import">
+imported by:
+    <a href="#pillow_heif">pillow_heif</a>
+
+  </div>
+
+</div>
+
+<div class="node">
+  <a name="pillow_heif._version"></a>
+  <a target="code" href="///C:/Users/kier/ortho-system/.venv/Lib/site-packages/pillow_heif/_version.py" type="text/plain"><tt>pillow_heif._version</tt></a>
+<span class="moduletype">SourceModule</span>  <div class="import">
+imports:
+    <a href="#pillow_heif">pillow_heif</a>
+
+  </div>
+  <div class="import">
+imported by:
+    <a href="#pillow_heif">pillow_heif</a>
+
+  </div>
+
+</div>
+
+<div class="node">
+  <a name="pillow_heif.as_plugin"></a>
+  <a target="code" href="///C:/Users/kier/ortho-system/.venv/Lib/site-packages/pillow_heif/as_plugin.py" type="text/plain"><tt>pillow_heif.as_plugin</tt></a>
+<span class="moduletype">SourceModule</span>  <div class="import">
+imports:
+    <a href="#PIL">PIL</a>
+ &#8226;   <a href="#PIL.Image">PIL.Image</a>
+ &#8226;   <a href="#PIL.ImageFile">PIL.ImageFile</a>
+ &#8226;   <a href="#PIL.ImageSequence">PIL.ImageSequence</a>
+ &#8226;   <a href="#__future__">__future__</a>
+ &#8226;   <a href="#_pillow_heif">_pillow_heif</a>
+ &#8226;   <a href="#itertools">itertools</a>
+ &#8226;   <a href="#pillow_heif">pillow_heif</a>
+ &#8226;   <a href="#pillow_heif._deffered_error">pillow_heif._deffered_error</a>
+ &#8226;   <a href="#pillow_heif.constants">pillow_heif.constants</a>
+ &#8226;   <a href="#pillow_heif.heif">pillow_heif.heif</a>
+ &#8226;   <a href="#pillow_heif.misc">pillow_heif.misc</a>
+ &#8226;   <a href="#pillow_heif.options">pillow_heif.options</a>
+ &#8226;   <a href="#typing">typing</a>
+ &#8226;   <a href="#warnings">warnings</a>
+
+  </div>
+  <div class="import">
+imported by:
+    <a href="#pillow_heif">pillow_heif</a>
+ &#8226;   <a href="#pillow_heif.HeifImagePlugin">pillow_heif.HeifImagePlugin</a>
+
+  </div>
+
+</div>
+
+<div class="node">
+  <a name="pillow_heif.constants"></a>
+  <a target="code" href="///C:/Users/kier/ortho-system/.venv/Lib/site-packages/pillow_heif/constants.py" type="text/plain"><tt>pillow_heif.constants</tt></a>
+<span class="moduletype">SourceModule</span>  <div class="import">
+imports:
+    <a href="#enum">enum</a>
+ &#8226;   <a href="#pillow_heif">pillow_heif</a>
+
+  </div>
+  <div class="import">
+imported by:
+    <a href="#pillow_heif">pillow_heif</a>
+ &#8226;   <a href="#pillow_heif.as_plugin">pillow_heif.as_plugin</a>
+ &#8226;   <a href="#pillow_heif.heif">pillow_heif.heif</a>
+ &#8226;   <a href="#pillow_heif.misc">pillow_heif.misc</a>
+
+  </div>
+
+</div>
+
+<div class="node">
+  <a name="pillow_heif.heif"></a>
+  <a target="code" href="///C:/Users/kier/ortho-system/.venv/Lib/site-packages/pillow_heif/heif.py" type="text/plain"><tt>pillow_heif.heif</tt></a>
+<span class="moduletype">SourceModule</span>  <div class="import">
+imports:
+    <a href="#PIL">PIL</a>
+ &#8226;   <a href="#PIL.Image">PIL.Image</a>
+ &#8226;   <a href="#__future__">__future__</a>
+ &#8226;   <a href="#_pillow_heif">_pillow_heif</a>
+ &#8226;   <a href="#copy">copy</a>
+ &#8226;   <a href="#io">io</a>
+ &#8226;   <a href="#pillow_heif">pillow_heif</a>
+ &#8226;   <a href="#pillow_heif._deffered_error">pillow_heif._deffered_error</a>
+ &#8226;   <a href="#pillow_heif.constants">pillow_heif.constants</a>
+ &#8226;   <a href="#pillow_heif.misc">pillow_heif.misc</a>
+ &#8226;   <a href="#pillow_heif.options">pillow_heif.options</a>
+ &#8226;   <a href="#typing">typing</a>
+
+  </div>
+  <div class="import">
+imported by:
+    <a href="#main.py">main.py</a>
+ &#8226;   <a href="#pillow_heif">pillow_heif</a>
+ &#8226;   <a href="#pillow_heif.as_plugin">pillow_heif.as_plugin</a>
+
+  </div>
+
+</div>
+
+<div class="node">
+  <a name="pillow_heif.misc"></a>
+  <a target="code" href="///C:/Users/kier/ortho-system/.venv/Lib/site-packages/pillow_heif/misc.py" type="text/plain"><tt>pillow_heif.misc</tt></a>
+<span class="moduletype">SourceModule</span>  <div class="import">
+imports:
+    <a href="#PIL">PIL</a>
+ &#8226;   <a href="#PIL.Image">PIL.Image</a>
+ &#8226;   <a href="#__future__">__future__</a>
+ &#8226;   <a href="#_pillow_heif">_pillow_heif</a>
+ &#8226;   <a href="#builtins">builtins</a>
+ &#8226;   <a href="#dataclasses">dataclasses</a>
+ &#8226;   <a href="#enum">enum</a>
+ &#8226;   <a href="#math">math</a>
+ &#8226;   <a href="#pathlib">pathlib</a>
+ &#8226;   <a href="#pillow_heif">pillow_heif</a>
+ &#8226;   <a href="#pillow_heif._deffered_error">pillow_heif._deffered_error</a>
+ &#8226;   <a href="#pillow_heif.constants">pillow_heif.constants</a>
+ &#8226;   <a href="#pillow_heif.options">pillow_heif.options</a>
+ &#8226;   <a href="#re">re</a>
+ &#8226;   <a href="#struct">struct</a>
+
+  </div>
+  <div class="import">
+imported by:
+    <a href="#pillow_heif">pillow_heif</a>
+ &#8226;   <a href="#pillow_heif.as_plugin">pillow_heif.as_plugin</a>
+ &#8226;   <a href="#pillow_heif.heif">pillow_heif.heif</a>
+
+  </div>
+
+</div>
+
+<div class="node">
+  <a name="pillow_heif.options"></a>
+  <a target="code" href="///C:/Users/kier/ortho-system/.venv/Lib/site-packages/pillow_heif/options.py" type="text/plain"><tt>pillow_heif.options</tt></a>
+<span class="moduletype">SourceModule</span>  <div class="import">
+imports:
+    <a href="#pillow_heif">pillow_heif</a>
+
+  </div>
+  <div class="import">
+imported by:
+    <a href="#pillow_heif">pillow_heif</a>
+ &#8226;   <a href="#pillow_heif.as_plugin">pillow_heif.as_plugin</a>
+ &#8226;   <a href="#pillow_heif.heif">pillow_heif.heif</a>
+ &#8226;   <a href="#pillow_heif.misc">pillow_heif.misc</a>
 
   </div>
 
@@ -55532,8 +55811,8 @@ imported by:
   <a target="code" href="///C:/Users/kier/ortho-system/.venv/Lib/site-packages/python_multipart/multipart.py" type="text/plain"><tt>python_multipart.multipart</tt></a>
 <span class="moduletype">SourceModule</span>  <div class="import">
 imports:
-    <a href="#'collections.abc'">'collections.abc'</a>
- &#8226;   <a href="#__future__">__future__</a>
+    <a href="#__future__">__future__</a>
+ &#8226;   <a href="#email.message">email.message</a>
  &#8226;   <a href="#enum">enum</a>
  &#8226;   <a href="#io">io</a>
  &#8226;   <a href="#logging">logging</a>
@@ -55546,6 +55825,7 @@ imports:
  &#8226;   <a href="#sys">sys</a>
  &#8226;   <a href="#tempfile">tempfile</a>
  &#8226;   <a href="#typing">typing</a>
+ &#8226;   <a href="#typing_extensions">typing_extensions</a>
 
   </div>
   <div class="import">
@@ -55874,6 +56154,7 @@ imported by:
  &#8226;   <a href="#pandas.util.version">pandas.util.version</a>
  &#8226;   <a href="#pdb">pdb</a>
  &#8226;   <a href="#pickletools">pickletools</a>
+ &#8226;   <a href="#pillow_heif.misc">pillow_heif.misc</a>
  &#8226;   <a href="#pkgutil">pkgutil</a>
  &#8226;   <a href="#platform">platform</a>
  &#8226;   <a href="#plistlib">plistlib</a>
@@ -61340,6 +61621,7 @@ imported by:
  &#8226;   <a href="#pandas.util._print_versions">pandas.util._print_versions</a>
  &#8226;   <a href="#pickle">pickle</a>
  &#8226;   <a href="#pickletools">pickletools</a>
+ &#8226;   <a href="#pillow_heif.misc">pillow_heif.misc</a>
  &#8226;   <a href="#platform">platform</a>
  &#8226;   <a href="#plistlib">plistlib</a>
  &#8226;   <a href="#setuptools._vendor.backports.tarfile">setuptools._vendor.backports.tarfile</a>
@@ -63354,6 +63636,8 @@ imported by:
  &#8226;   <a href="#pandas.util._validators">pandas.util._validators</a>
  &#8226;   <a href="#pandas.util.version">pandas.util.version</a>
  &#8226;   <a href="#pdb">pdb</a>
+ &#8226;   <a href="#pillow_heif.as_plugin">pillow_heif.as_plugin</a>
+ &#8226;   <a href="#pillow_heif.heif">pillow_heif.heif</a>
  &#8226;   <a href="#pydantic">pydantic</a>
  &#8226;   <a href="#pydantic._internal._config">pydantic._internal._config</a>
  &#8226;   <a href="#pydantic._internal._core_metadata">pydantic._internal._core_metadata</a>
@@ -63677,6 +63961,7 @@ imported by:
  &#8226;   <a href="#pydantic_core">pydantic_core</a>
  &#8226;   <a href="#pydantic_core._pydantic_core">pydantic_core._pydantic_core</a>
  &#8226;   <a href="#pydantic_core.core_schema">pydantic_core.core_schema</a>
+ &#8226;   <a href="#python_multipart.multipart">python_multipart.multipart</a>
  &#8226;   <a href="#setuptools._distutils.cmd">setuptools._distutils.cmd</a>
  &#8226;   <a href="#setuptools._distutils.command.bdist">setuptools._distutils.command.bdist</a>
  &#8226;   <a href="#setuptools._distutils.compat.py310">setuptools._distutils.compat.py310</a>
@@ -64800,6 +65085,7 @@ imported by:
     <a href="#apscheduler.job">apscheduler.job</a>
  &#8226;   <a href="#click.types">click.types</a>
  &#8226;   <a href="#fastapi.encoders">fastapi.encoders</a>
+ &#8226;   <a href="#main.py">main.py</a>
  &#8226;   <a href="#matplotlib.backend_tools">matplotlib.backend_tools</a>
  &#8226;   <a href="#matplotlib.backends._backend_tk">matplotlib.backends._backend_tk</a>
  &#8226;   <a href="#pandas.core.reshape.merge">pandas.core.reshape.merge</a>
@@ -66176,6 +66462,7 @@ imported by:
  &#8226;   <a href="#pandas.util._exceptions">pandas.util._exceptions</a>
  &#8226;   <a href="#pathlib">pathlib</a>
  &#8226;   <a href="#pdb">pdb</a>
+ &#8226;   <a href="#pillow_heif.as_plugin">pillow_heif.as_plugin</a>
  &#8226;   <a href="#platform">platform</a>
  &#8226;   <a href="#pydantic">pydantic</a>
  &#8226;   <a href="#pydantic._internal._config">pydantic._internal._config</a>

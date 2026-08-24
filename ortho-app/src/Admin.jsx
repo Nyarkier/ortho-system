@@ -15,6 +15,9 @@ function Admin() {
   const [nearestAppointment, setNearestAppointment] = useState(null);
   const [loading, setLoading] = useState(true);
   const [showMore, setShowMore] = useState(false);
+  const [queueInput, setQueueInput] = useState("");
+  const [currentQueueNumber, setCurrentQueueNumber] = useState(null);
+  const [isCallingQueue, setIsCallingQueue] = useState(false);
 
   const fetchAppointments = async () => {
     try {
@@ -40,6 +43,49 @@ function Admin() {
     } catch (error) {
       console.error(error);
     }
+  };
+
+  const fetchQueueState = async () => {
+    try {
+      const res = await fetch(`${API_BASE}/queue/current`);
+      if (!res.ok) return;
+      const data = await res.json();
+      setCurrentQueueNumber(data.current_number ?? null);
+    } catch (error) {
+      console.error("Error fetching queue state", error);
+    }
+  };
+
+  const callQueueNumber = async () => {
+    if (!/^(?:[1-9]|[1-5]\d|60)$/.test(queueInput)) {
+      showToast("Enter a whole ticket number from 1 to 60", "warning");
+      return;
+    }
+
+    setIsCallingQueue(true);
+    try {
+      const res = await fetch(`${API_BASE}/queue/call`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ number: Number(queueInput) }),
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        showToast(data.detail?.[0]?.msg || data.detail || "Unable to call queue number", "error");
+        return;
+      }
+      setCurrentQueueNumber(data.current_number);
+      showToast(`Now serving ${String(data.current_number).padStart(2, "0")}`, "success");
+    } catch (error) {
+      showToast("Unable to reach the queue service", "error");
+      console.error(error);
+    } finally {
+      setIsCallingQueue(false);
+    }
+  };
+
+  const openQueueDisplay = () => {
+    window.open("/queue-display", "_blank", "noopener,noreferrer");
   };
 
   const pendingAppointments = useMemo(() => {
@@ -85,6 +131,7 @@ function Admin() {
   useEffect(() => {
     fetchAppointments();
     fetchNearestAppointment();
+    fetchQueueState();
   }, []);
 
   const handleDelete = async (id) => {
@@ -126,6 +173,40 @@ function Admin() {
         </div>
 
         <div className="admin-dashboard-grid">
+          <div className="dashboard-card queue-control-card">
+            <div className="dashboard-card-header">
+              <h3>Queue Control</h3>
+              <span className="status-badge checked">Tickets 1–60</span>
+            </div>
+            <div className="queue-control-body">
+              <div className="queue-control-current">
+                <span>Currently Displaying</span>
+                <strong>{currentQueueNumber === null ? "--" : String(currentQueueNumber).padStart(2, "0")}</strong>
+              </div>
+              <div className="queue-control-form">
+                <label htmlFor="queue-number">Number</label>
+                <input
+                  id="queue-number"
+                  type="text"
+                  inputMode="numeric"
+                  pattern="[1-9]|[1-5][0-9]|60"
+                  maxLength="2"
+                  value={queueInput}
+                  onChange={(event) => setQueueInput(event.target.value)}
+                  onKeyDown={(event) => {
+                    if (event.key === "Enter") callQueueNumber();
+                  }}
+                  aria-label="Physical queue ticket number"
+                />
+                <button type="button" className="btn btn-confirm" onClick={callQueueNumber} disabled={isCallingQueue}>
+                  {isCallingQueue ? "Calling..." : "Call Number"}
+                </button>
+              </div>
+              <button type="button" className="btn btn-secondary" onClick={openQueueDisplay}>
+                Open Queue Display
+              </button>
+            </div>
+          </div>
           <div className="dashboard-card">
             <div className="dashboard-card-header">
               <h3>Next Appointments</h3>
@@ -142,7 +223,7 @@ function Admin() {
                       </div>
                       <div className="next-appointment-meta">
                         <span>{appt.phone || "—"}</span>
-                        <span className="next-appointment-proc">{appt.procedure || "—"}</span>
+                        <span className="next-appointment-proc">{appt.next_procedure || appt.procedure || "—"}</span>
                       </div>
                     </li>
                   ))}
@@ -193,6 +274,8 @@ function Admin() {
                   <th>Age</th>
                   <th>Date</th>
                   <th>Time</th>
+                  <th>Complaint / Reason</th>
+                  <th>Next Procedure</th>
                   <th>Procedure</th>
                   <th>Payment</th>
                   <th>Debit</th>
@@ -215,6 +298,8 @@ function Admin() {
                     <td>{appt.age ?? "—"}</td>
                     <td>{appt.date}</td>
                     <td>{appt.time}</td>
+                    <td>{appt.complaint || "—"}</td>
+                    <td>{appt.next_procedure || "—"}</td>
                     <td>{appt.procedure || "—"}</td>
                     <td>{appt.payment_method || "—"}</td>
                     <td>{formatCurrency(appt.debit)}</td>

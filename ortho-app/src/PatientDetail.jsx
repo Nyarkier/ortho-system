@@ -23,6 +23,11 @@ function PatientDetail() {
   const [isUploadingPhoto, setIsUploadingPhoto] = useState(false);
   const [photoVersion, setPhotoVersion] = useState(0);
   const photoInputRef = useRef(null);
+  const [mouthPhotosOpen, setMouthPhotosOpen] = useState(false);
+  const [mouthPhotos, setMouthPhotos] = useState([]);
+  const [isLoadingMouthPhotos, setIsLoadingMouthPhotos] = useState(false);
+  const [uploadingMouthPhoto, setUploadingMouthPhoto] = useState("");
+  const mouthPhotoInputRefs = useRef({});
 
   const visitDueAmount = (visit) =>
     Math.max(0, Number(visit.debit || 0) - Number(visit.credit_amount || 0));
@@ -58,6 +63,8 @@ function PatientDetail() {
   const startEditVisit = (visit) => {
     setEditVisit({
       ...visit,
+      complaint: visit.complaint || "",
+      next_procedure: visit.next_procedure || "",
       description: visit.description || "",
       debit: visit.debit ?? 0,
       credit_amount: visit.credit_amount ?? 0,
@@ -85,6 +92,8 @@ function PatientDetail() {
           visit_date: editVisit.visit_date,
           visit_time: editVisit.visit_time,
           description: editVisit.description,
+          complaint: editVisit.complaint,
+          next_procedure: editVisit.next_procedure,
           debit: Number(editVisit.debit),
           credit_amount: Number(editVisit.credit_amount),
           payment_method: editVisit.payment_method || null,
@@ -158,6 +167,76 @@ function PatientDetail() {
       showToast(error.message || "Unable to upload photo.", "error");
     } finally {
       setIsUploadingPhoto(false);
+    }
+  };
+
+  const loadMouthPhotos = async () => {
+    setIsLoadingMouthPhotos(true);
+    try {
+      const res = await fetch(`${API_BASE}/patients/${id}/mouth-photos`);
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.detail || "Unable to load mouth photos.");
+      setMouthPhotos(data.photos || []);
+    } catch (error) {
+      showToast(error.message || "Unable to load mouth photos.", "error");
+    } finally {
+      setIsLoadingMouthPhotos(false);
+    }
+  };
+
+  const toggleMouthPhotos = () => {
+    setMouthPhotosOpen((isOpen) => {
+      if (!isOpen && mouthPhotos.length === 0) loadMouthPhotos();
+      return !isOpen;
+    });
+  };
+
+  const handleMouthPhotoUpload = async (photoType, event) => {
+    const file = event.target.files?.[0];
+    event.target.value = "";
+    if (!file) return;
+
+    setUploadingMouthPhoto(photoType);
+    try {
+      const formData = new FormData();
+      formData.append("file", file);
+      const existing = mouthPhotos.find((photo) => photo.photo_type === photoType)?.photo_url;
+      const method = existing ? "PUT" : "POST";
+      const res = await fetch(`${API_BASE}/patients/${id}/mouth-photos/${photoType}`, {
+        method,
+        body: formData,
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.detail || "Unable to save mouth photo.");
+      await loadMouthPhotos();
+      setPhotoVersion(Date.now());
+      showToast("Mouth photo saved", "success");
+    } catch (error) {
+      showToast(error.message || "Unable to save mouth photo.", "error");
+    } finally {
+      setUploadingMouthPhoto("");
+    }
+  };
+
+  const handleMouthPhotoRemove = async (photoType) => {
+    const confirmed = await confirm({
+      title: "Remove mouth photo?",
+      message: "This will permanently remove this clinical photo.",
+      confirmLabel: "Remove",
+    });
+    if (!confirmed) return;
+
+    setUploadingMouthPhoto(photoType);
+    try {
+      const res = await fetch(`${API_BASE}/patients/${id}/mouth-photos/${photoType}`, { method: "DELETE" });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.detail || "Unable to remove mouth photo.");
+      await loadMouthPhotos();
+      showToast("Mouth photo removed", "success");
+    } catch (error) {
+      showToast(error.message || "Unable to remove mouth photo.", "error");
+    } finally {
+      setUploadingMouthPhoto("");
     }
   };
 
@@ -291,8 +370,78 @@ function PatientDetail() {
             <div><span>Age</span><strong>{patient.age ?? "—"}</strong></div>
             <div><span>Occupation</span><strong>{patient.occupation || "—"}</strong></div>
             <div><span>Status</span><strong>{patient.status || "—"}</strong></div>
-            <div><span>Purpose</span><strong>{patient.complaint || "—"}</strong></div>
+            <div><span>Complaint</span><strong>{patient.complaint || "—"}</strong></div>
           </div>
+        </div>
+
+        <div className="mouth-photos-section">
+          <button type="button" className="btn btn-mouth-toggle" onClick={toggleMouthPhotos}>
+            {mouthPhotosOpen ? "Hide Mouth Photos" : "Show Mouth Photos"}
+          </button>
+          {mouthPhotosOpen && (
+            <div className="card mouth-photos-card">
+              <div className="mouth-photos-header">
+                <div>
+                  <h3>Mouth / Teeth Photos</h3>
+                  <p className="card-subtitle">Clinical photos are stored separately from the profile photo.</p>
+                </div>
+                {isLoadingMouthPhotos && <span className="mouth-photos-loading">Loading...</span>}
+              </div>
+              <div className="mouth-photo-grid">
+                {mouthPhotos.map((photo) => {
+                  const hasPhoto = Boolean(photo.photo_url);
+                  const isBusy = uploadingMouthPhoto === photo.photo_type;
+                  return (
+                    <div className="mouth-photo-slot" key={photo.photo_type}>
+                      <h4>{photo.label}</h4>
+                      <div className="mouth-photo-preview">
+                        {hasPhoto ? (
+                          <img
+                            src={`${API_BASE}${photo.photo_url}?v=${photoVersion}`}
+                            alt={`${photo.label} clinical view`}
+                          />
+                        ) : (
+                          <span>No photo</span>
+                        )}
+                      </div>
+                      <input
+                        ref={(element) => {
+                          mouthPhotoInputRefs.current[photo.photo_type] = element;
+                        }}
+                        type="file"
+                        accept=".jpg,.jpeg,.png,.heic,.heif,.webp,image/jpeg,image/png,image/heic,image/heif,image/webp"
+                        onChange={(event) => handleMouthPhotoUpload(photo.photo_type, event)}
+                        hidden
+                      />
+                      <div className="mouth-photo-actions">
+                        <button
+                          type="button"
+                          className="btn btn-small btn-upload-photo"
+                          onClick={() => mouthPhotoInputRefs.current[photo.photo_type]?.click()}
+                          disabled={isBusy}
+                        >
+                          {isBusy ? "Saving..." : hasPhoto ? "Replace" : "Upload"}
+                        </button>
+                        {hasPhoto && (
+                          <button
+                            type="button"
+                            className="btn btn-small btn-delete"
+                            onClick={() => handleMouthPhotoRemove(photo.photo_type)}
+                            disabled={isBusy}
+                          >
+                            Remove
+                          </button>
+                        )}
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+              <button type="button" className="btn btn-secondary btn-mouth-toggle" onClick={toggleMouthPhotos}>
+                Hide Mouth Photos
+              </button>
+            </div>
+          )}
         </div>
 
         {patient.pending_appointments?.length > 0 && (
@@ -301,7 +450,7 @@ function PatientDetail() {
             <ul className="pending-list">
               {patient.pending_appointments.map((appt) => (
                 <li key={appt.id}>
-                  {appt.visit_date} at {appt.visit_time || "—"}
+                  {appt.visit_date} at {appt.visit_time || "—"} · Complaint: {appt.complaint || "—"} · Next: {appt.next_procedure || "—"}
                 </li>
               ))}
             </ul>
@@ -314,6 +463,8 @@ function PatientDetail() {
               <tr>
                 <th>Date</th>
                 <th>No.</th>
+                <th>Complaint / Reason</th>
+                <th>Next Procedure</th>
                 <th>Description</th>
                 <th>Time</th>
                 <th>Debit</th>
@@ -331,6 +482,8 @@ function PatientDetail() {
                   <tr key={visit.id}>
                     <td>{visit.visit_date}</td>
                     <td>{visit.visit_no ?? "—"}</td>
+                    <td>{visit.complaint || "—"}</td>
+                    <td>{visit.next_procedure || "—"}</td>
                     <td>{visit.description || "—"}</td>
                     <td>{visit.visit_time || "—"}</td>
                     <td>{formatCurrency(visit.debit)}</td>
@@ -352,7 +505,7 @@ function PatientDetail() {
                 ))
               ) : (
                 <tr>
-                  <td colSpan="11" className="admin-empty-cell">
+                  <td colSpan="13" className="admin-empty-cell">
                     No completed visits yet.
                   </td>
                 </tr>
@@ -405,6 +558,24 @@ function PatientDetail() {
               <input
                 type="text"
                 placeholder=" "
+                value={editVisit.complaint}
+                onChange={(e) => updateEditVisit("complaint", e.target.value)}
+              />
+              <label>Complaint / Reason for Visit</label>
+            </div>
+            <div className="input-group">
+              <input
+                type="text"
+                placeholder=" "
+                value={editVisit.next_procedure}
+                onChange={(e) => updateEditVisit("next_procedure", e.target.value)}
+              />
+              <label>Next Procedure</label>
+            </div>
+            <div className="input-group">
+              <input
+                type="text"
+                placeholder=" "
                 value={editVisit.description}
                 onChange={(e) => updateEditVisit("description", e.target.value)}
               />
@@ -439,7 +610,7 @@ function PatientDetail() {
                 value={editVisit.payment_method}
                 onChange={(e) => updateEditVisit("payment_method", e.target.value)}
               >
-                <option value="">Select payment method</option>
+                <option value="" hidden />
                 <option value="Cash">Cash</option>
                 <option value="GCash">GCash</option>
                 <option value="Bank Transfer">Bank Transfer</option>

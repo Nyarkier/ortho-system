@@ -5,7 +5,7 @@ echo ========================================
 echo Building Ortho App EXE Files
 echo ========================================
 
-cd /d D:\Ortho_App\ortho-system
+cd /d "%~dp0"
 
 echo.
 echo Step 1: Installing PyInstaller...

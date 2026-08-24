@@ -20,6 +20,7 @@ This app is functional for local use, but it is not yet production-grade.
 - Patient check-in with full visit details (address, age, payment method, amount paid, procedure)
 - Automatic check-in timestamp recording
 - Admin dashboard at `/admin` to view and delete appointments
+- Patient ledger includes optional clinical mouth/teeth photos in eight fixed categories
 - Export appointments to `appointments.xlsx` (includes all visit fields)
 - Frontend uses relative API URL in production; dev mode uses `http://127.0.0.1:8000`
 
@@ -31,9 +32,13 @@ This app is functional for local use, but it is not yet production-grade.
 - One spreadsheet row = one visit line from the paper card
 - Export now creates two sheets: `Patients` and `Visits`
 
+### Clinical mouth/teeth photos
+
+Patient records support one optional photo for each of these categories: `Front`, `Front Upper`, `Front Lower`, `Right Side`, `Left Side`, `Upper Occlusal`, `Lower Occlusal`, and `Other`. Mouth photos are stored as generated files under the runtime data directory, while SQLite stores only their metadata. They are separate from the patient profile photo and are loaded only after the mouth-photo section is opened.
+
 ### Import template columns
 
-`name`, `phone`, `address`, `age`, `occupation`, `status`, `complaint`, `visit_date`, `visit_time`, `visit_no`, `description`, `debit`, `credit_amount`, `credit_date`, `payment_method`, `checked_in_at`
+`name`, `phone`, `address`, `age`, `occupation`, `status`, `complaint`, `next_procedure`, `visit_date`, `visit_time`, `visit_no`, `description`, `debit`, `credit_amount`, `credit_date`, `payment_method`, `checked_in_at`
 
 ### Known gaps and issues
 

@@ -1,4 +1,5 @@
 import io
+import os
 import sys
 import webbrowser
 from datetime import date, datetime
@@ -13,7 +14,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse, StreamingResponse
 from fastapi.staticfiles import StaticFiles
 from PIL import Image, ImageOps, UnidentifiedImageError
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, StrictInt
 
 try:
     from pillow_heif import register_heif_opener
@@ -37,8 +38,19 @@ DB_PATH = DATA_DIR / "appointments.db"
 EXPORT_PATH = DATA_DIR / "appointments.xlsx"
 TEMPLATE_PATH = DATA_DIR / "import-template.xlsx"
 PHOTO_DIR = DATA_DIR / "patient-photos"
+MOUTH_PHOTO_DIR = PHOTO_DIR / "mouth"
 PHOTO_MAX_BYTES = 10 * 1024 * 1024
 PHOTO_MAX_DIMENSION = 1200
+MOUTH_PHOTO_TYPES = {
+    "front": "Front",
+    "front_upper": "Front Upper",
+    "front_lower": "Front Lower",
+    "right_side": "Right Side",
+    "left_side": "Left Side",
+    "upper_occlusal": "Upper Occlusal",
+    "lower_occlusal": "Lower Occlusal",
+    "other": "Other",
+}
 
 IMPORT_COLUMNS = [
     "name",
@@ -48,6 +60,7 @@ IMPORT_COLUMNS = [
     "occupation",
     "status",
     "complaint",
+    "next_procedure",
     "visit_date",
     "visit_time",
     "visit_no",
@@ -67,6 +80,7 @@ COLUMN_ALIASES = {
     "occupation": ["occupation", "job"],
     "status": ["status", "marital_status"],
     "complaint": ["complaint", "complain", "chief_complaint"],
+    "next_procedure": ["next_procedure", "next procedure", "next_treatment"],
     "visit_date": ["visit_date", "appointment_date", "date"],
     "visit_time": ["visit_time", "appointment_time", "time"],
     "visit_no": ["visit_no", "no", "number", "visit_number"],
@@ -176,6 +190,24 @@ def remove_patient_photo(photo_path: str | None) -> None:
         candidate.unlink()
 
 
+def remove_mouth_photo(photo_path: str | None) -> None:
+    if not photo_path:
+        return
+    candidate = (MOUTH_PHOTO_DIR / Path(photo_path).name).resolve()
+    photo_root = MOUTH_PHOTO_DIR.resolve()
+    if candidate.parent == photo_root and candidate.is_file():
+        candidate.unlink()
+
+
+def get_mouth_photo_path(photo_path: str | None) -> Path | None:
+    if not photo_path:
+        return None
+    candidate = (MOUTH_PHOTO_DIR / Path(photo_path).name).resolve()
+    if candidate.parent != MOUTH_PHOTO_DIR.resolve() or not candidate.is_file():
+        return None
+    return candidate
+
+
 def process_patient_photo(content: bytes, filename: str | None) -> tuple[bytes, str, str]:
     extension = Path(filename or "").suffix.lower()
     allowed_extensions = {".jpg", ".jpeg", ".png", ".heic", ".heif", ".webp"}
@@ -234,6 +266,32 @@ def init_db():
     )
     cursor.execute(
         """
+        CREATE TABLE IF NOT EXISTS patient_mouth_photos (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            patient_id INTEGER NOT NULL,
+            photo_type TEXT NOT NULL,
+            photo_path TEXT NOT NULL,
+            created_at TEXT NOT NULL,
+            updated_at TEXT NOT NULL,
+            UNIQUE(patient_id, photo_type),
+            FOREIGN KEY (patient_id) REFERENCES patients(id) ON DELETE CASCADE
+        )
+        """
+    )
+    cursor.execute(
+        """
+        CREATE TABLE IF NOT EXISTS queue_state (
+            id INTEGER PRIMARY KEY CHECK (id = 1),
+            current_number INTEGER,
+            updated_at TEXT
+        )
+        """
+    )
+    cursor.execute(
+        "INSERT OR IGNORE INTO queue_state (id, current_number, updated_at) VALUES (1, NULL, NULL)"
+    )
+    cursor.execute(
+        """
         CREATE TABLE IF NOT EXISTS visits (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
             patient_id INTEGER NOT NULL,
@@ -257,8 +315,20 @@ def init_db():
     conn.commit()
     ensure_patient_balance_adjustment_column()
     ensure_patient_photo_column()
+    ensure_visit_clinical_columns()
     PHOTO_DIR.mkdir(parents=True, exist_ok=True)
+    MOUTH_PHOTO_DIR.mkdir(parents=True, exist_ok=True)
     migrate_legacy_appointments()
+
+
+def ensure_visit_clinical_columns():
+    for column in ("complaint", "next_procedure"):
+        try:
+            cursor.execute(f"ALTER TABLE visits ADD COLUMN {column} TEXT")
+            conn.commit()
+        except sqlite3.OperationalError as exc:
+            if "duplicate column name" not in str(exc).lower():
+                raise
 
 
 def ensure_patient_balance_adjustment_column():
@@ -305,14 +375,16 @@ def migrate_legacy_appointments():
         cursor.execute(
             """
             INSERT INTO visits (
-                patient_id, visit_date, visit_time, description, debit, credit_amount,
+                patient_id, visit_date, visit_time, description, complaint, next_procedure, debit, credit_amount,
                 payment_method, checked_in_at, is_pending
-            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
             """,
             (
                 patient_id,
                 safe_get(row, 3),
                 normalize_time(safe_get(row, 4)),
+                safe_get(row, 10),
+                safe_get(row, 8),
                 safe_get(row, 10),
                 safe_float(safe_get(row, 9)),
                 safe_float(safe_get(row, 9)),
@@ -415,6 +487,8 @@ def visit_to_dict(row: tuple, patient: dict | None = None) -> dict:
         "checked_in_at": row[10],
         "is_pending": bool(row[11]),
         "checked_in": not bool(row[11]),
+        "complaint": row[12] if len(row) > 12 else None,
+        "next_procedure": row[13] if len(row) > 13 else None,
     }
     if patient:
         data.update(
@@ -425,7 +499,7 @@ def visit_to_dict(row: tuple, patient: dict | None = None) -> dict:
                 "age": patient["age"],
                 "occupation": patient["occupation"],
                 "status": patient["status"],
-                "complaint": patient["complaint"],
+                "complaint": data["complaint"] or patient["complaint"],
                 "date": row[2],
                 "time": row[3],
                 "procedure": row[5],
@@ -445,6 +519,7 @@ def appointment_to_legacy_dict(visit: dict) -> dict:
         "occupation": visit.get("occupation"),
         "status": visit.get("status"),
         "complaint": visit.get("complaint"),
+        "next_procedure": visit.get("next_procedure") or visit.get("description"),
         "date": visit.get("visit_date"),
         "time": visit.get("visit_time"),
         "procedure": visit.get("description"),
@@ -693,9 +768,9 @@ def import_row(row: dict) -> None:
     cursor.execute(
         """
         INSERT INTO visits (
-            patient_id, visit_date, visit_time, visit_no, description, debit, credit_amount,
+            patient_id, visit_date, visit_time, visit_no, description, complaint, next_procedure, debit, credit_amount,
             credit_date, payment_method, checked_in_at, is_pending
-        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
         """,
         (
             patient_id,
@@ -703,6 +778,8 @@ def import_row(row: dict) -> None:
             normalize_time(row.get("visit_time")) or None,
             safe_int(row.get("visit_no")),
             str(row.get("description", "")).strip() or None,
+            str(row.get("complaint", "")).strip() or None,
+            str(row.get("next_procedure", "")).strip() or None,
             debit,
             credit_amount,
             str(row.get("credit_date", "")).strip() or None,
@@ -724,6 +801,7 @@ def build_template_workbook() -> bytes:
                 "occupation": "Teacher",
                 "status": "Married",
                 "complaint": "Tooth pain",
+                "next_procedure": "Cleaning",
                 "visit_date": "2026-01-15",
                 "visit_time": "09:30",
                 "visit_no": 1,
@@ -753,6 +831,8 @@ class AppointmentCreate(BaseModel):
     occupation: str | None = None
     status: str | None = None
     complaint: str | None = None
+    procedure: str | None = None
+    next_procedure: str | None = None
     date: str = Field(min_length=1)
     time: str = Field(min_length=1)
 
@@ -768,6 +848,7 @@ class CheckInRequest(BaseModel):
     occupation: str | None = None
     status: str | None = None
     complaint: str | None = None
+    next_procedure: str | None = None
     debit: float = Field(ge=0)
     amount_paid: float = Field(ge=0)
     payment_method: str = Field(min_length=1)
@@ -797,16 +878,41 @@ class MergePatientsRequest(BaseModel):
     target_id: int
 
 
+class QueueCallRequest(BaseModel):
+    number: StrictInt = Field(ge=1, le=60)
+
+
 class VisitUpdate(BaseModel):
     visit_date: str | None = None
     visit_time: str | None = None
     visit_no: int | None = None
     description: str | None = None
+    complaint: str | None = None
+    next_procedure: str | None = None
     debit: float | None = None
     credit_amount: float | None = None
     credit_date: str | None = None
     payment_method: str | None = None
     checked_in_at: str | None = None
+
+
+@app.get("/queue/current")
+def get_current_queue_number():
+    row = cursor.execute(
+        "SELECT current_number FROM queue_state WHERE id = 1"
+    ).fetchone()
+    return {"current_number": row[0] if row else None}
+
+
+@app.post("/queue/call")
+def call_queue_number(payload: QueueCallRequest):
+    updated_at = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+    cursor.execute(
+        "UPDATE queue_state SET current_number = ?, updated_at = ? WHERE id = 1",
+        (payload.number, updated_at),
+    )
+    conn.commit()
+    return {"current_number": payload.number}
 
 
 @app.post("/appointments")
@@ -833,10 +939,17 @@ def create_appointment(appt: AppointmentCreate):
     )
     cursor.execute(
         """
-        INSERT INTO visits (patient_id, visit_date, visit_time, is_pending)
-        VALUES (?, ?, ?, 1)
+        INSERT INTO visits (patient_id, visit_date, visit_time, description, complaint, next_procedure, is_pending)
+        VALUES (?, ?, ?, ?, ?, ?, 1)
         """,
-        (patient_id, appt.date, visit_time),
+        (
+            patient_id,
+            appt.date,
+            visit_time,
+            appt.procedure.strip() if appt.procedure else None,
+            appt.complaint.strip() if appt.complaint else None,
+            appt.next_procedure.strip() if appt.next_procedure else None,
+        ),
     )
     conn.commit()
     return {
@@ -967,6 +1080,8 @@ def check_in(payload: CheckInRequest):
             visit_date = ?,
             visit_time = ?,
             description = ?,
+            complaint = ?,
+            next_procedure = ?,
             debit = ?,
             credit_amount = ?,
             credit_date = ?,
@@ -980,6 +1095,8 @@ def check_in(payload: CheckInRequest):
             payload.date,
             normalize_time(payload.time),
             payload.procedure.strip(),
+            payload.complaint.strip() if payload.complaint else None,
+            payload.next_procedure.strip() if payload.next_procedure else None,
             payload.debit,
             payload.amount_paid,
             payload.date,
@@ -1018,6 +1135,8 @@ def update_visit(visit_id: int, payload: VisitUpdate):
     visit_time = normalize_time(payload.visit_time) if payload.visit_time is not None else existing["visit_time"]
     visit_no = payload.visit_no if payload.visit_no is not None else existing["visit_no"]
     description = payload.description if payload.description is not None else existing["description"]
+    complaint = payload.complaint if payload.complaint is not None else existing["complaint"]
+    next_procedure = payload.next_procedure if payload.next_procedure is not None else existing["next_procedure"]
     payment_method = payload.payment_method.strip() if payload.payment_method is not None else existing["payment_method"]
     payment_method = payment_method or None
     credit_date = payload.credit_date if payload.credit_date is not None else existing["credit_date"]
@@ -1032,6 +1151,8 @@ def update_visit(visit_id: int, payload: VisitUpdate):
             visit_time = ?,
             visit_no = ?,
             description = ?,
+            complaint = ?,
+            next_procedure = ?,
             debit = ?,
             credit_amount = ?,
             credit_date = ?,
@@ -1044,6 +1165,8 @@ def update_visit(visit_id: int, payload: VisitUpdate):
             visit_time,
             visit_no,
             description,
+            complaint,
+            next_procedure,
             debit,
             credit_amount,
             credit_date,
@@ -1142,6 +1265,145 @@ async def upload_patient_photo(patient_id: int, file: UploadFile = File(...)):
     return {"status": "success", "photo_path": new_filename, "media_type": media_type}
 
 
+def require_mouth_photo_type(photo_type: str) -> None:
+    if photo_type not in MOUTH_PHOTO_TYPES:
+        raise HTTPException(status_code=400, detail="Invalid mouth photo category")
+
+
+def list_mouth_photos(patient_id: int) -> list[dict]:
+    local_conn = sqlite3.connect(DB_PATH)
+    try:
+        rows = local_conn.execute(
+            "SELECT photo_type, photo_path, created_at, updated_at FROM patient_mouth_photos WHERE patient_id = ?",
+            (patient_id,),
+        ).fetchall()
+    finally:
+        local_conn.close()
+    by_type = {
+        row[0]: {
+            "photo_type": row[0],
+            "label": MOUTH_PHOTO_TYPES[row[0]],
+            "photo_url": f"/patients/{patient_id}/mouth-photos/{row[0]}/file",
+            "created_at": row[2],
+            "updated_at": row[3],
+        }
+        for row in rows
+        if row[0] in MOUTH_PHOTO_TYPES and get_mouth_photo_path(row[1])
+    }
+    return [
+        {"photo_type": key, "label": label, "photo_url": None}
+        if key not in by_type
+        else by_type[key]
+        for key, label in MOUTH_PHOTO_TYPES.items()
+    ]
+
+
+@app.get("/patients/{patient_id}/mouth-photos")
+def get_patient_mouth_photos(patient_id: int):
+    local_conn = sqlite3.connect(DB_PATH)
+    try:
+        patient = local_conn.execute("SELECT id FROM patients WHERE id = ?", (patient_id,)).fetchone()
+    finally:
+        local_conn.close()
+    if not patient:
+        raise HTTPException(status_code=404, detail="Patient not found")
+    return {"photos": list_mouth_photos(patient_id)}
+
+
+@app.get("/patients/{patient_id}/mouth-photos/{photo_type}/file")
+def get_patient_mouth_photo_file(patient_id: int, photo_type: str):
+    require_mouth_photo_type(photo_type)
+    local_conn = sqlite3.connect(DB_PATH)
+    try:
+        row = local_conn.execute(
+            """
+            SELECT m.photo_path
+            FROM patient_mouth_photos m
+            JOIN patients p ON p.id = m.patient_id
+            WHERE m.patient_id = ? AND m.photo_type = ?
+            """,
+            (patient_id, photo_type),
+        ).fetchone()
+    finally:
+        local_conn.close()
+    photo_path = get_mouth_photo_path(row[0] if row else None)
+    if not photo_path:
+        raise HTTPException(status_code=404, detail="Mouth photo not found")
+    return FileResponse(photo_path)
+
+
+@app.post("/patients/{patient_id}/mouth-photos/{photo_type}")
+@app.put("/patients/{patient_id}/mouth-photos/{photo_type}")
+async def save_patient_mouth_photo(patient_id: int, photo_type: str, file: UploadFile = File(...)):
+    require_mouth_photo_type(photo_type)
+    local_conn = sqlite3.connect(DB_PATH)
+    try:
+        patient = local_conn.execute("SELECT id FROM patients WHERE id = ?", (patient_id,)).fetchone()
+        existing = local_conn.execute(
+            "SELECT photo_path FROM patient_mouth_photos WHERE patient_id = ? AND photo_type = ?",
+            (patient_id, photo_type),
+        ).fetchone()
+    finally:
+        local_conn.close()
+    if not patient:
+        raise HTTPException(status_code=404, detail="Patient not found")
+
+    content = await file.read(PHOTO_MAX_BYTES + 1)
+    processed, extension, media_type = process_patient_photo(content, file.filename)
+    now = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+    new_filename = f"patient-{patient_id}-mouth-{photo_type}-{uuid4().hex}.{extension}"
+    new_path = MOUTH_PHOTO_DIR / new_filename
+    try:
+        new_path.write_bytes(processed)
+        local_conn = sqlite3.connect(DB_PATH)
+        local_conn.execute(
+            """
+            INSERT INTO patient_mouth_photos (patient_id, photo_type, photo_path, created_at, updated_at)
+            VALUES (?, ?, ?, ?, ?)
+            ON CONFLICT(patient_id, photo_type) DO UPDATE SET photo_path = excluded.photo_path, updated_at = excluded.updated_at
+            """,
+            (patient_id, photo_type, new_filename, now, now),
+        )
+        local_conn.commit()
+        local_conn.close()
+    except Exception as exc:
+        if "local_conn" in locals():
+            local_conn.close()
+        new_path.unlink(missing_ok=True)
+        raise HTTPException(status_code=500, detail="Unable to save the mouth photo.") from exc
+
+    if existing:
+        remove_mouth_photo(existing[0])
+    return {"status": "success", "photo_type": photo_type, "media_type": media_type}
+
+
+@app.delete("/patients/{patient_id}/mouth-photos/{photo_type}")
+def delete_patient_mouth_photo(patient_id: int, photo_type: str):
+    require_mouth_photo_type(photo_type)
+    local_conn = sqlite3.connect(DB_PATH)
+    try:
+        patient = local_conn.execute("SELECT id FROM patients WHERE id = ?", (patient_id,)).fetchone()
+        row = local_conn.execute(
+            "SELECT photo_path FROM patient_mouth_photos WHERE patient_id = ? AND photo_type = ?",
+            (patient_id, photo_type),
+        ).fetchone()
+    finally:
+        local_conn.close()
+    if not patient:
+        raise HTTPException(status_code=404, detail="Patient not found")
+    if not row:
+        raise HTTPException(status_code=404, detail="Mouth photo not found")
+    delete_conn = sqlite3.connect(DB_PATH)
+    delete_conn.execute(
+        "DELETE FROM patient_mouth_photos WHERE patient_id = ? AND photo_type = ?",
+        (patient_id, photo_type),
+    )
+    delete_conn.commit()
+    delete_conn.close()
+    remove_mouth_photo(row[0])
+    return {"status": "success", "message": "Mouth photo removed"}
+
+
 @app.put("/patients/{patient_id}")
 def update_patient(patient_id: int, payload: PatientUpdate):
     if not get_patient(patient_id):
@@ -1198,9 +1460,16 @@ def delete_patient(patient_id: int):
     patient = get_patient(patient_id)
     if not patient:
         raise HTTPException(status_code=404, detail="Patient not found")
+    mouth_rows = cursor.execute(
+        "SELECT photo_path FROM patient_mouth_photos WHERE patient_id = ?",
+        (patient_id,),
+    ).fetchall()
+    cursor.execute("DELETE FROM patient_mouth_photos WHERE patient_id = ?", (patient_id,))
     cursor.execute("DELETE FROM visits WHERE patient_id = ?", (patient_id,))
     cursor.execute("DELETE FROM patients WHERE id = ?", (patient_id,))
     conn.commit()
+    for row in mouth_rows:
+        remove_mouth_photo(row[0])
     remove_patient_photo(patient.get("photo_path"))
     return {"status": "success", "message": "Patient deleted"}
 
@@ -1433,6 +1702,8 @@ def export_to_excel():
             v.visit_time,
             v.visit_no,
             v.description,
+            v.complaint,
+            v.next_procedure,
             v.debit,
             v.credit_amount,
             v.credit_date,
@@ -1464,7 +1735,7 @@ if FRONTEND_DIST.exists():
     @app.get("/{full_path:path}")
     def serve_spa(full_path: str):
         api_prefixes = ("appointments", "checkin", "export", "patients", "import")
-        if full_path.startswith(api_prefixes) or full_path == "export":
+        if full_path.startswith(api_prefixes) or full_path == "export" or full_path == "queue" or full_path.startswith("queue/"):
             raise HTTPException(status_code=404, detail="Not found")
 
         requested = FRONTEND_DIST / full_path
@@ -1479,11 +1750,14 @@ scheduler.add_job(export_to_excel, "interval", days=7)
 scheduler.start()
 
 if __name__ == "__main__":
-    url = "http://127.0.0.1:8000"
+    host = os.getenv("ORTHO_HOST", "0.0.0.0")
+    port = int(os.getenv("ORTHO_PORT", "8000"))
+    browser_host = "127.0.0.1" if host == "0.0.0.0" else host
+    url = f"http://{browser_host}:{port}"
     try:
         webbrowser.open(url)
     except Exception:
         pass
     import uvicorn
 
-    uvicorn.run(app, host="127.0.0.1", port=8000)
+    uvicorn.run(app, host=host, port=port)

@@ -170,6 +170,8 @@ function ImportRecords() {
                     <th>Name</th>
                     <th>Phone</th>
                     <th>Visit Date</th>
+                    <th>Complaint</th>
+                    <th>Next Procedure</th>
                     <th>Description</th>
                     <th>Debit</th>
                     <th>Credit</th>
@@ -188,6 +190,8 @@ function ImportRecords() {
                       <td>{row.data.name || "—"}</td>
                       <td>{row.data.phone || "—"}</td>
                       <td>{row.data.visit_date || "—"}</td>
+                      <td>{row.data.complaint || "—"}</td>
+                      <td>{row.data.next_procedure || "—"}</td>
                       <td>{row.data.description || "—"}</td>
                       <td>{row.data.debit || "—"}</td>
                       <td>{row.data.credit_amount || "—"}</td>

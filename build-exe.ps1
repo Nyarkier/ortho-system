@@ -4,7 +4,7 @@ Write-Host "========================================" -ForegroundColor Cyan
 Write-Host "Building Ortho App EXE Files" -ForegroundColor Cyan
 Write-Host "========================================" -ForegroundColor Cyan
 
-Set-Location "D:\Ortho_App\ortho-system"
+Set-Location $PSScriptRoot
 
 Write-Host "`nStep 1: Installing PyInstaller..." -ForegroundColor Yellow
 pip install pyinstaller
