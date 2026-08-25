@@ -990,6 +990,11 @@ body {
   width: 110px !important;
   min-width: 110px;
   padding: 8px 10px;
+  font-size: 1rem;
+  border-radius: 12px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
 }
 
 .pending-card {
